@@ -94,20 +94,24 @@ def refresh() {
 }
 
 def poll() { 
+	updateThermostatData(parent.getDeviceStatus(this))
+}
+
+def updateThermostatData(thermostatData) {
 	//update the state data
 	def next = (state.polling.last?:0) + 30000  //will not update if it's not more than 30 seconds. this is to stop polling from updating all the state data.
-	if ((now() > next) || (state.polling.runNow)) {
+	if (true) {
+	//if ((now() > next) || (state.polling.runNow)) {
 		state.polling.last = now()
 		state.polling.runNow = false
 
-		state.data = parent.getDeviceStatus(this) 
-		sendEvent(name: "temperature",     value: state.data.temperature)
-		sendEvent(name: "humidity",        value: state.data.humidity)
-		sendEvent(name: "operatingState",  value: state.data.operatingState)
-		sendEvent(name: "mode",            value: state.data.thermostatMode)
-		sendEvent(name: "fanMode",         value: state.data.thermostatFanMode)
-		sendEvent(name: "heatingSetpoint", value: state.data.heatingSetpoint)
-		sendEvent(name: "coolingSetpoint", value: state.data.coolingSetpoint)
+		sendEvent(name: "temperature",     value: thermostatData.temperature)
+		sendEvent(name: "humidity",        value: thermostatData.humidity)
+		sendEvent(name: "operatingState",  value: thermostatData.operatingState)
+		sendEvent(name: "mode",            value: thermostatData.thermostatMode)
+		sendEvent(name: "fanMode",         value: thermostatData.thermostatFanMode)
+		sendEvent(name: "heatingSetpoint", value: thermostatData.heatingSetpoint)
+		sendEvent(name: "coolingSetpoint", value: thermostatData.coolingSetpoint)
 	}
 }
 
@@ -140,7 +144,7 @@ def setCoolingSetpoint(Number coolingSetpoint) {
 	// check heating setpoint 
 	def coolSetpointDiff = coolingSetpoint - 3
 	def heatingSetpoint = device.currentValue("heatingSetpoint").toInteger()
-	heatingSetpoint = (coolSetpointDiff < heatSetpoint)? coolSetpointDiff : heatingSetpoint
+	heatingSetpoint = (coolSetpointDiff < heatingSetpoint)? coolSetpointDiff : heatingSetpoint
 	
 	def thermostatData = [ 
 		thermostatMode: device.currentState("mode")?.value,
