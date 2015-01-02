@@ -20,14 +20,14 @@
  **************************
  */
 definition(
-  name: "iComfort",
-  namespace: "copy-ninja",
-  author: "Jason Mok",
-  description: "Connect iComfort to control your thermostats",
-  category: "SmartThings Labs",
-  iconUrl:   "http://smartthings.copyninja.net/icons/Lennox_iComfort@1x.png",
-  iconX2Url: "http://smartthings.copyninja.net/icons/Lennox_iComfort@2x.png",
-  iconX3Url: "http://smartthings.copyninja.net/icons/Lennox_iComfort@3x.png"
+	name: "iComfort",
+	namespace: "copy-ninja",
+	author: "Jason Mok",
+	description: "Connect iComfort to control your thermostats",
+	category: "SmartThings Labs",
+	iconUrl:   "http://smartthings.copyninja.net/icons/Lennox_iComfort@1x.png",
+	iconX2Url: "http://smartthings.copyninja.net/icons/Lennox_iComfort@2x.png",
+	iconX3Url: "http://smartthings.copyninja.net/icons/Lennox_iComfort@3x.png"
 )
 
 preferences {
@@ -58,10 +58,10 @@ def prefListDevice() {
 					input(name: "thermostat", type: "enum", required:false, multiple:true, metadata:[values:thermostatList])
 				}
 			} else {
-            	section(""){
-                    paragraph "Could not find any devices " 
-                }
-            }
+				section(""){
+					paragraph "Could not find any devices " 
+				}
+			}
 		}  
 	} else {
 		return dynamicPage(name: "prefListDevice",  title: "Error!", install:false, uninstall:true) {
@@ -137,7 +137,6 @@ private forceLogin() {
 		runNow: true
 	]  
 	state.data = [:]
-    
 	return doLogin()
 }
 
@@ -187,7 +186,7 @@ private apiGet(apiPath, apiQuery = [], callback = {}) {
 	// try to call 
 	try {
 		httpGet(apiParams) { response ->
-        	log.debug "HTTP GET response: " + response.data
+		log.debug "HTTP GET response: " + response.data
 			callback(response)
 		}
 	}	catch (Error e)	{
@@ -202,14 +201,14 @@ private apiPut(apiPath, apiQuery = [], apiBody = [], callback = {}) {
 		uri: "https://" + settings.username + ":" + settings.password + "@services.myicomfort.com",
 		path: apiPath,
 		contentType: "application/json; charset=utf-8",
-        query: apiQuery,
+		query: apiQuery,
 		body: apiBody
 	]
-    log.debug "HTTP PUT request: " + apiParams
+	log.debug "HTTP PUT request: " + apiParams
     
 	try {
 		httpPut(apiParams) { response ->
-        	log.debug "HTTP PUT response: " + response.data
+		log.debug "HTTP PUT response: " + response.data
 			callback(response)
 		}
 	} catch (Error e)	{
@@ -219,32 +218,28 @@ private apiPut(apiPath, apiQuery = [], apiBody = [], callback = {}) {
 
 // Updates data for devices
 def updateDeviceData() {    
-	// automatically checks if the token has expired, if so login again
-	if (login()) {        
-		// Next polling time, defined in settings
-		def next = (state.polling.last?:0) + ((settings.polling.toInteger() > 0 ? settings.polling.toInteger() : 1) * 60 * 1000)
-		if ((now() > next) || (state.polling.runNow)) {
-			// set polling states
-			state.polling.last = now()
-			state.polling.runNow = false
-			
-			// update data for child devices
-            updateDeviceChildDate()
-		}
+	// Next polling time, defined in settings
+	def next = (state.polling.last?:0) + ((settings.polling.toInteger() > 0 ? settings.polling.toInteger() : 1) * 60 * 1000)
+	if ((now() > next) || (state.polling.runNow)) {
+		// set polling states
+		state.polling.last = now()
+		state.polling.runNow = false
+		
+		// update data for child devices
+		updateDeviceChildData()
 	}
-    return true
+	return true
 }
 
-// update child device
-private updateDeviceChildDate() {
+// update child device data
+private updateDeviceChildData() {
 	def childDevices = getAllChildDevices()
 	childDevices.each { device ->
 		def childDevicesGateway = device.deviceNetworkId.split("\\|")[1]
 		apiGet("/DBAcessService.svc/GetTStatInfoList", [GatewaySN: childDevicesGateway, TempUnit: "0", Cancel_Away: "-1"]) { response ->
 			if (response.status == 200) {
-            	
 				response.data.tStatInfo.each { 
-                	//log.debug "response: " + it
+					//log.debug "response: " + it
 					state.data[device.deviceNetworkId] = [
 						fanMode: lookupInfo( "fanMode", it.Fan_Mode ),
 						coolingSetpoint: it.Cool_Set_Point.toInteger(),
@@ -253,10 +248,10 @@ private updateDeviceChildDate() {
 						temperature: it.Indoor_Temp,
 						thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode ),
 						operatingState: lookupInfo( "operatingState", it.System_Status )
-                    ]
-                }
-            }
-        } 
+					]
+				}
+			}
+		} 
 	}
 }
 
@@ -311,16 +306,6 @@ def lookupInfoReverse( name, value ) {
 	}
 }
 
-//Poll all the child
-def pollAllChild() {
-	// get all the children and send updates
-	def childDevice = getAllChildDevices()
-	childDevice.each { 
-		log.debug "Polling " + it.deviceNetworkId
-		it.poll()
-	}
-}
-
 /* for SmartDevice to call */
 // Refresh data
 def refresh() {
@@ -328,12 +313,19 @@ def refresh() {
 		last: now(),
 		runNow: true
 	]
-	
+
 	//update device to state data
 	def updated = updateDeviceData()
 	
 	//force devices to poll to get the latest status
-    if (updated) { pollAllChild() }
+	if (updated) { 
+		// get all the children and send updates
+		def childDevice = getAllChildDevices()
+		childDevice.each { 
+			log.debug "Polling " + it.deviceNetworkId
+			//it.poll()
+		}
+	}
 }
 
 // Get Device Gateway SN
@@ -348,14 +340,13 @@ def getDeviceStatus(child) {
 
 // Send command to start or stop
 def sendCommand(child, thermostatValue = []) {
-	
 	def apiBody = [ 
-    	Cool_Set_Point: thermostatValue.coolingSetpoint,
-        Heat_Set_Point: thermostatValue.heatingSetpoint,
-        Fan_Mode: lookupInfoReverse("fanMode",thermostatValue.fanMode),
-        Operation_Mode: lookupInfoReverse("thermostatMode",thermostatValue.thermostatMode),
-        Pref_Temp_Units: 0,
-        Zone_Number: 0,
+		Cool_Set_Point: thermostatValue.coolingSetpoint,
+		Heat_Set_Point: thermostatValue.heatingSetpoint,
+		Fan_Mode: lookupInfoReverse("fanMode",thermostatValue.fanMode),
+		Operation_Mode: lookupInfoReverse("thermostatMode",thermostatValue.thermostatMode),
+		Pref_Temp_Units: 0,
+		Zone_Number: 0,
 		GatewaySN: getDeviceGatewaySN(child) 
 	]    
 	
