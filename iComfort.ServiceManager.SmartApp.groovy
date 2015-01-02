@@ -127,6 +127,9 @@ def initialize() {
 		deleteDevices = getChildDevices().findAll { !selectedDevices.contains(it.deviceNetworkId) }
 	}
 	deleteDevices.each { deleteChildDevice(it.deviceNetworkId) } 
+	
+	//Refresh device
+	refresh()
 }
 
 /* Access Management */
@@ -324,6 +327,7 @@ def refresh() {
 		childDevice.each { 
 			log.debug "Polling " + it.deviceNetworkId
 			//it.poll()
+			it.updateThermostatData(state.data[it.deviceNetworkId])
 		}
 	}
 }
