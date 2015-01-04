@@ -99,6 +99,16 @@ def initialize() {
 		runNow: true
 	]
 	state.data = [:]
+	state.lookup = [
+		operatingState: [:],
+		thermostatFanMode: [:],
+		thermostatMode: [:]
+	]
+	state.list = [
+		operatingState: [],
+		thermostatFanMode: [],
+		thermostatMode: []
+	]
     
 	// Create new devices for each selected doors
 	def selectedDevices = []
@@ -127,6 +137,26 @@ def initialize() {
 		deleteDevices = getChildDevices().findAll { !selectedDevices.contains(it.deviceNetworkId) }
 	}
 	deleteDevices.each { deleteChildDevice(it.deviceNetworkId) } 
+	
+	//Get lookup lists
+	apiGet("/DBAcessService.svc/GetTstatLookupInfo", [name: "Operation_Mode", langnumber: 0]) { response ->
+		response.data.tStatlookupInfo.each {
+			state.lookup.thermostatMode.putAt(it.value, translateDesc(it.description))
+			state.list.thermostatMode.add(translateDesc(it.description))
+		}
+	}
+	apiGet("/DBAcessService.svc/GetTstatLookupInfo", [name: "Fan_Mode", langnumber: 0]) { response ->
+		response.data.tStatlookupInfo.each {
+			state.lookup.thermostatFanMode.putAt(it.value, translateDesc(it.description))
+			state.list.thermostatFanMode.add(translateDesc(it.description))
+		}
+	}
+	apiGet("/DBAcessService.svc/GetTstatLookupInfo", [name: "System_Status", langnumber: 0]) { response ->
+		response.data.tStatlookupInfo.each {
+			state.lookup.operatingState.putAt(it.value, translateDesc(it.description))
+			state.list.operatingState.add(translateDesc(it.description))
+		}
+	}
 	
 	//Refresh device
 	refresh()
@@ -167,12 +197,12 @@ private getThermostatList() {
 	apiGet("/DBAcessService.svc/GetSystemsInfo", [userID: settings.username]) { response ->
 		if (response.status == 200) {
 			response.data.Systems.each { device ->
-                def dni = [ app.id, device.Gateway_SN ].join('|')
-                thermostatList[dni] = device.System_Name   
+				def dni = [ app.id, device.Gateway_SN ].join('|')
+				thermostatList[dni] = device.System_Name   
 			}
 		}
 	}    
-  return thermostatList
+	return thermostatList
 }
 
 /* api connection */
@@ -185,11 +215,11 @@ private apiGet(apiPath, apiQuery = [], callback = {}) {
 		path: apiPath,
 		query: apiQuery
 	]
-    log.debug "HTTP GET request: " + apiParams
+	//log.debug "HTTP GET request: " + apiParams
 	// try to call 
 	try {
 		httpGet(apiParams) { response ->
-		log.debug "HTTP GET response: " + response.data
+			//log.debug "HTTP GET response: " + response.data
 			callback(response)
 		}
 	}	catch (Error e)	{
@@ -207,11 +237,9 @@ private apiPut(apiPath, apiQuery = [], apiBody = [], callback = {}) {
 		query: apiQuery,
 		body: apiBody
 	]
-	log.debug "HTTP PUT request: " + apiParams
     
 	try {
 		httpPut(apiParams) { response ->
-		log.debug "HTTP PUT response: " + response.data
 			callback(response)
 		}
 	} catch (Error e)	{
@@ -244,13 +272,13 @@ private updateDeviceChildData() {
 				response.data.tStatInfo.each { 
 					//log.debug "response: " + it
 					state.data[device.deviceNetworkId] = [
-						fanMode: lookupInfo( "fanMode", it.Fan_Mode ),
-						coolingSetpoint: it.Cool_Set_Point.toInteger(),
-						heatingSetpoint: it.Heat_Set_Point.toInteger(),
-						humidity: it.Indoor_Humidity,
 						temperature: it.Indoor_Temp,
-						thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode ),
-						operatingState: lookupInfo( "operatingState", it.System_Status )
+						humidity: it.Indoor_Humidity,
+						coolingSetpoint: it.Cool_Set_Point,
+						heatingSetpoint: it.Heat_Set_Point,
+						thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode.toString(), true ),
+						thermostatFanMode: lookupInfo( "thermostatFanMode", it.Fan_Mode.toString(), true ),
+						operatingState: lookupInfo( "operatingState", it.System_Status.toString(), true )
 					]
 				}
 			}
@@ -259,53 +287,27 @@ private updateDeviceChildData() {
 }
 
 // lookup value translation
-def lookupInfo( name, value ) {
-	if (name == "fanMode") {
-		switch (value) {
-			case 0 : return "auto"
-			case 1 : return "on"
-			case 2 : return "circulate" 
-			default: return "auto"
+def lookupInfo( name, value, mode ) {
+	if (name == "thermostatFanMode") {
+		if (mode) {
+			return state.lookup.thermostatFanMode.getAt(value)
+		} else {
+			return state.lookup.thermostatFanMode.find{it.value==value}?.key
 		}
 	}
 	if (name == "thermostatMode") {
-		switch (value) {
-			case 0 : return "off"
-			case 1 : return "heat"
-			case 2 : return "cool" 
-			case 3 : return "auto" 
-			default: return "auto"
-		}		
+		if (mode) {
+			return state.lookup.thermostatMode.getAt(value)
+		} else {
+			return state.lookup.thermostatMode.find{it.value==value}?.key
+		}	
 	}
 	if (name == "operatingState") {
-		switch (value) {
-			case 0 : return "idle"
-			case 1 : return "heating"
-			case 2 : return "cooling" 
-			case 3 : return "idle" 	  //waiting
-			case 4 : return "heating" //emergency heat 
-			default: return "idle"
-		}		
-	}
-}
-// lookup value translation
-def lookupInfoReverse( name, value ) {
-	if (name == "fanMode") {
-		switch (value) {
-			case "auto"       : return 0
-			case "on"         : return 1
-			case  "circulate" : return 2
-			default: return 0
-		}
-	}
-	if (name == "thermostatMode") {
-		switch (value) {
-			case "off"  : return 0
-			case "heat" : return 1
-			case "cool" : return 2 
-			case "auto" : return 3
-			default: return 3
-		}		
+		if (mode) {
+			return state.lookup.operatingState.getAt(value)
+		} else {
+			return state.lookup.operatingState.find{it.value==value}?.key
+		}	
 	}
 }
 
@@ -316,16 +318,22 @@ def refresh() {
 		last: now(),
 		runNow: true
 	]
-
+	
+    
+    
 	//update device to state data
 	def updated = updateDeviceData()
 	
+    //log.debug "state data: " + state.data
+    //log.debug "state lookup: " + state.lookup
+    
+    
 	//force devices to poll to get the latest status
 	if (updated) { 
 		// get all the children and send updates
 		def childDevice = getAllChildDevices()
 		childDevice.each { 
-			log.debug "Polling " + it.deviceNetworkId
+			//log.debug "Polling " + it.deviceNetworkId
 			//it.poll()
 			it.updateThermostatData(state.data[it.deviceNetworkId])
 		}
@@ -343,19 +351,47 @@ def getDeviceStatus(child) {
 }
 
 // Send command to start or stop
-def sendCommand(child, thermostatValue = []) {
+def sendCommand(child, thermostatData = []) {
+	thermostatData.each { key, value -> 
+		if (key=="coolingSetpoint") { state.data[child.device.deviceNetworkId].coolingSetpoint = value }
+		if (key=="heatingSetpoint") { state.data[child.device.deviceNetworkId].heatingSetpoint = value }
+		if (key=="thermostatFanMode") { state.data[child.device.deviceNetworkId].thermostatFanMode = value }
+		if (key=="thermostatMode") { state.data[child.device.deviceNetworkId].thermostatMode = value }
+	}
+	
 	def apiBody = [ 
-		Cool_Set_Point: thermostatValue.coolingSetpoint,
-		Heat_Set_Point: thermostatValue.heatingSetpoint,
-		Fan_Mode: lookupInfoReverse("fanMode",thermostatValue.fanMode),
-		Operation_Mode: lookupInfoReverse("thermostatMode",thermostatValue.thermostatMode),
+		Cool_Set_Point: state.data[child.device.deviceNetworkId].coolingSetpoint,
+		Heat_Set_Point: state.data[child.device.deviceNetworkId].heatingSetpoint,
+		Fan_Mode: lookupInfo("thermostatFanMode",state.data[child.device.deviceNetworkId].thermostatFanMode,false),
+		Operation_Mode: lookupInfo("thermostatMode",state.data[child.device.deviceNetworkId].thermostatMode,false),
 		Pref_Temp_Units: 0,
 		Zone_Number: 0,
 		GatewaySN: getDeviceGatewaySN(child) 
-	]    
+	] 
 	
-	//Send command
-	apiPut("/DBAcessService.svc/SetTStatInfo", [], apiBody) 	
+	// set up final parameters
+	def apiParams = [ 
+		uri: "https://" + settings.username + ":" + settings.password + "@services.myicomfort.com",
+		path: "/DBAcessService.svc/SetTStatInfo",
+		contentType: "application/x-www-form-urlencoded",
+        	requestContentType: "application/json; charset=utf-8",
+		body: apiBody
+	]
+    
+	try {
+		httpPut(apiParams) 
+	} catch (Error e)	{
+		log.debug "API Error: $e"
+	}
 	
 	return true
+}
+
+def translateDesc(value) {
+	switch (value) {
+		case "cool only"     : return "cool"
+		case "heat only"     : return "heat"
+		case "heat or cool"  : return "auto"
+		default: return value
+	}
 }
