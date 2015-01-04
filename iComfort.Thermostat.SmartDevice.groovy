@@ -5,12 +5,15 @@ metadata {
 		capability "Polling"
 		capability "Refresh"
 	        
+	        attribute "thermostatProgram", "string"
+	        
 		command "heatLevelUp"
 		command "heatLevelDown"
 		command "coolLevelUp"
 		command "coolLevelDown"
 		command "switchMode"
 		command "switchFanMode"
+		command "switchProgram"
 	}
 
 	simulator { }
@@ -33,20 +36,26 @@ metadata {
 			state "humidity", label:'${currentValue}% humidity', unit:""
 		}
 		standardTile("operatingState", "device.thermostatOperatingState", canChangeIcon: false, decoration: "flat") {
-			state("idle",      icon: "st.thermostat.ac.air-conditioning", label: "Idle")
-			state("heating",   icon: "st.thermostat.heat")
-			state("cooling",   icon: "st.thermostat.cool")
+			state("idle",            icon: "st.thermostat.ac.air-conditioning", label: "Idle")
+			state("waiting",         icon: "st.thermostat.ac.air-conditioning", label: "Waiting")
+			state("heating",         icon: "st.thermostat.heat")
+			state("cooling",         icon: "st.thermostat.cool")
+			state("emergency heat",  icon: "st.thermostat.emergency-heat")
+			
 		}
-		standardTile("mode", "device.thermostatMode", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
-			state("auto",      action:"switchMode",    nextState: "heat",      icon: "st.thermostat.auto")
-			state("heat",      action:"switchMode",    nextState: "cool",      icon: "st.thermostat.heat")
-			state("cool",      action:"switchMode",    nextState: "off",       icon: "st.thermostat.cool")
-			state("off",       action:"switchMode",    nextState: "auto",      icon: "st.thermostat.heating-cooling-off")
+		standardTile("thermostatMode", "device.thermostatMode", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
+			state("auto",      action:"switchMode",    nextState: "auto",      icon: "st.thermostat.auto")
+			state("heat",      action:"switchMode",    nextState: "heat",      icon: "st.thermostat.heat")
+			state("cool",      action:"switchMode",    nextState: "cool",      icon: "st.thermostat.cool")
+			state("off",       action:"switchMode",    nextState: "off",       icon: "st.thermostat.heating-cooling-off")
+			state("emergency heat",       action:"switchMode",    nextState: "emergency heat",       icon: "st.thermostat.emergency-heat")
+			state("program",   action:"switchMode",    nextState: "program",   icon: "st.thermostat.ac.air-conditioning", label: "Program")
 		}
-		standardTile("fanMode", "device.thermostatFanMode", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
-			state("auto",      action:"switchFanMode", nextState: "on",        icon: "st.thermostat.fan-auto")
-			state("on",        action:"switchFanMode", nextState: "circulate", icon: "st.thermostat.fan-on")
-			state("circulate", action:"switchFanMode", nextState: "auto",      icon: "st.thermostat.fan-circulate")
+		standardTile("thermostatFanMode", "device.thermostatFanMode", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
+			state("auto",      action:"switchFanMode", nextState: "auto",       icon: "st.thermostat.fan-auto")
+			state("on",        action:"switchFanMode", nextState: "on",         icon: "st.thermostat.fan-on")
+			state("circulate", action:"switchFanMode", nextState: "circulate",  icon: "st.thermostat.fan-circulate")
+			state("off",       action:"switchFanMode", nextState: "off",        icon: "st.thermostat.fan-off")
 		}
 		standardTile("heatLevelUp", "device.switch", canChangeIcon: false, inactiveLabel: true ) {
 			state("heatLevelUp",   action:"heatLevelUp",   icon:"st.thermostat.thermostat-up", backgroundColor:"#F7C4BA")
@@ -66,11 +75,15 @@ metadata {
 		standardTile("coolLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true) {
 			state("coolLevelDown", action:"coolLevelDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#BAEDF7")
 		}
+		standardTile("thermostatProgram", "device.thermostatProgram", inactiveLabel: false, decoration: "flat") {
+			state("manual", action:"switchProgram", icon:"st.secondary.secondary", label: "Manual")
+			state("program", action:"switchProgram", icon:"st.secondary.secondary", label: '${currentValue}')
+		}
 		standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat") {
 			state("default", action:"refresh.refresh",        icon:"st.secondary.refresh")
 		}
 		main "temperature"
-		details(["temperature", "humidity", "operatingState",  "heatLevelUp", "coolLevelUp", "mode", "heatingSetpoint", "coolingSetpoint", "fanMode", "heatLevelDown", "coolLevelDown", "refresh" ])
+		details(["temperature", "humidity", "operatingState",  "heatLevelUp", "coolLevelUp", "thermostatFanMode", "heatingSetpoint", "coolingSetpoint", "thermostatMode", "heatLevelDown", "coolLevelDown", "thermostatProgram", "refresh" ])
 	}
 }
 def installed() { initialize() }
@@ -78,7 +91,6 @@ def installed() { initialize() }
 def updated() { initialize() }
 
 def initialize() {
-	state.data = [:]
 	state.polling = [ 
 		last: 0,
 		runNow: true
@@ -99,19 +111,14 @@ def poll() {
 
 def updateThermostatData(thermostatData) {
 	//update the state data
-	def next = (state.polling.last?:0) + 30000  //will not update if it's not more than 30 seconds. this is to stop polling from updating all the state data.
-	if (true) {
-	//if ((now() > next) || (state.polling.runNow)) {
+	def next = (state.polling.last?:0) + 15000  //will not update if it's not more than 15 seconds. this is to stop polling from updating all the state data.
+	//if (true) {
+	if ((now() > next) || (state.polling.runNow)) {
 		state.polling.last = now()
 		state.polling.runNow = false
-
-		sendEvent(name: "temperature",     value: thermostatData.temperature)
-		sendEvent(name: "humidity",        value: thermostatData.humidity)
-		sendEvent(name: "operatingState",  value: thermostatData.operatingState)
-		sendEvent(name: "mode",            value: thermostatData.thermostatMode)
-		sendEvent(name: "fanMode",         value: thermostatData.thermostatFanMode)
-		sendEvent(name: "heatingSetpoint", value: thermostatData.heatingSetpoint)
-		sendEvent(name: "coolingSetpoint", value: thermostatData.coolingSetpoint)
+		thermostatData.each { name, value -> 
+			sendEvent(name: name, value: value)
+		}
 	}
 }
 
@@ -127,8 +134,6 @@ def setHeatingSetpoint(Number heatingSetpoint) {
 	coolingSetpoint = (heatSetpointDiff > coolingSetpoint)? heatSetpointDiff : coolingSetpoint
 	
 	def thermostatData = [ 
-		thermostatMode: device.currentState("mode")?.value,
-		thermostatFanMode: device.currentState("fanMode")?.value,
 		coolingSetpoint: coolingSetpoint, 
 		heatingSetpoint: heatingSetpoint
 	]
@@ -147,8 +152,6 @@ def setCoolingSetpoint(Number coolingSetpoint) {
 	heatingSetpoint = (coolSetpointDiff < heatingSetpoint)? coolSetpointDiff : heatingSetpoint
 	
 	def thermostatData = [ 
-		thermostatMode: device.currentState("mode")?.value,
-		thermostatFanMode: device.currentState("fanMode")?.value,
 		coolingSetpoint: coolingSetpoint, 
 		heatingSetpoint: heatingSetpoint
 	]
@@ -164,37 +167,31 @@ def switchMode() {
 
 	switch (currentMode) {
 		case "off":
-			returnCommand = setThermostatFanMode("heat")
+			setThermostatMode("heat")
 			break
 		case "heat":
-			returnCommand = setThermostatFanMode("cool")
+			setThermostatMode("cool")
 			break
 		case "cool":
-			returnCommand = setThermostatFanMode("auto")
+			setThermostatMode("auto")
 			break
 		case "auto":
-			returnCommand = setThermostatFanMode("off")
+			setThermostatMode("off")
 			break
 		default:
-			returnCommand = setThermostatFanMode("auto")
+			setThermostatMode("auto")
 	}
-	if(!currentMode) { returnCommand = setThermostatMode("auto") }
-	returnCommand
+	if(!currentMode) { setThermostatMode("auto") }
 }
 
 def off() { setThermostatMode("off") }
 def heat() { setThermostatMode("heat") }
-def emergencyHeat() { setThermostatMode("heat") }
+def emergencyHeat() { setThermostatMode("emergency heat") }
 def cool() { setThermostatMode("cool") }
 def auto() { setThermostatMode("auto") }
 
 def setThermostatMode(mode) {
-	def thermostatData = [ 
-		thermostatMode: mode,
-		thermostatFanMode: device.currentState("fanMode")?.value,
-		coolingSetpoint: device.currentValue("coolingSetpoint"), 
-		heatingSetpoint: device.currentValue("heatingSetpoint")
-	]
+	def thermostatData = [ thermostatMode: mode ]
 	setThermostatData(thermostatData)
 }
 
@@ -206,19 +203,18 @@ def switchFanMode() {
 
 	switch (currentFanMode) {
 		case "auto":
-			returnCommand = setThermostatFanMode("on")
+			setThermostatFanMode("on")
 			break
 		case "on":
-			returnCommand = setThermostatFanMode("circulate")
+			setThermostatFanMode("circulate")
 			break
 		case "circulate":
-			returnCommand = setThermostatFanMode("auto")
+			setThermostatFanMode("auto")
 			break
 		default:
-			returnCommand = setThermostatFanMode("auto")
+			setThermostatFanMode("auto")
 	}
-	if(!currentFanMode) { returnCommand = setThermostatFanMode("auto") }
-	returnCommand
+	if(!currentFanMode) { setThermostatFanMode("auto") }
 }
 
 def fanOn() { setThermostatFanMode("on") }
@@ -226,43 +222,38 @@ def fanAuto() { setThermostatFanMode("auto") }
 def fanCirculate() { setThermostatFanMode("circulate") }
 
 def setThermostatFanMode(fanMode) {
-	def thermostatData = [ 
-		thermostatMode: device.currentState("mode")?.value,
-		thermostatFanMode: fanMode,
-		coolingSetpoint: device.currentValue("coolingSetpoint"), 
-		heatingSetpoint: device.currentValue("heatingSetpoint")
-	]
+	def thermostatData = [ thermostatFanMode: fanMode ]
 	setThermostatData(thermostatData)
 }
 
 def heatLevelUp() {
 	def setpoint = device.currentValue("heatingSetpoint") + 1
-	log.debug "Setpoint: " + setpoint
+	//log.debug "Setpoint: " + setpoint
 	setHeatingSetpoint(setpoint.toInteger())    
 }
 def heatLevelDown() {
 	def setpoint = device.currentValue("heatingSetpoint") - 1 
-	log.debug "Setpoint: " + setpoint
+	//log.debug "Setpoint: " + setpoint
 	setHeatingSetpoint(setpoint.toInteger())    
 }
 def coolLevelUp() {
 	def setpoint = device.currentValue("coolingSetpoint") + 1
-	log.debug "Setpoint: " + setpoint 
+	//log.debug "Setpoint: " + setpoint 
 	setCoolingSetpoint(setpoint.toInteger())
 }
 
 def coolLevelDown() {
 	def setpoint = device.currentValue("coolingSetpoint") - 1
-	log.debug "Setpoint: " + setpoint
+	//log.debug "Setpoint: " + setpoint
 	setCoolingSetpoint(setpoint.toInteger())
 }
 
+def switchProgram() {
+}
+
 def setThermostatData(thermostatData) {
-	state.polling.last = now()
+	state.polling.runNow = true
 	log.debug "ThermostatData: " + thermostatData
-	sendEvent(name: "mode",            value: thermostatData.thermostatMode) 
-	sendEvent(name: "fanMode",         value: thermostatData.thermostatFanMode) 
-	sendEvent(name: "heatingSetpoint", value: thermostatData.heatingSetpoint) 
-	sendEvent(name: "coolingSetpoint", value: thermostatData.coolingSetpoint) 
-	//parent.sendCommand(this, state.data)
+	updateThermostatData(thermostatData)
+	parent.sendCommand(this, thermostatData)
 }
