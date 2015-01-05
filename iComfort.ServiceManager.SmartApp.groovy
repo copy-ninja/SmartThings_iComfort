@@ -43,26 +43,31 @@ def prefLogIn() {
 			input("username", "text", title: "Username", description: "iComfort Username")
 			input("password", "password", title: "Password", description: "iComfort password")
 		}
+		section("Display"){
+			input(name: "temperatureUnit", title: "Temperature Unit", type: "enum", defaultValue: 0, metadata:[values:[0:"°F",1:"°C"]] )
+		}  
 		section("Connectivity"){
 			input(name: "polling", title: "Server Polling (in Minutes)", type: "int", description: "in minutes", defaultValue: "5" )
 		}              
-  }
+	}
 }
 
 def prefListDevice() {
 	if (forceLogin()) {
 		def thermostatList = getThermostatList()
-		return dynamicPage(name: "prefListDevice",  title: "Thermostats", install:true, uninstall:true) {
-			if (thermostatList) {
+		if (thermostatList) {
+			return dynamicPage(name: "prefListDevice",  title: "Thermostats", install:true, uninstall:true) {
 				section("Select which thermostat to use"){
 					input(name: "thermostat", type: "enum", required:false, multiple:true, metadata:[values:thermostatList])
 				}
-			} else {
+			}
+		} else {
+			return dynamicPage(name: "prefListDevice",  title: "Error!", install:false, uninstall:true) {
 				section(""){
 					paragraph "Could not find any devices " 
 				}
 			}
-		}  
+		}
 	} else {
 		return dynamicPage(name: "prefListDevice",  title: "Error!", install:false, uninstall:true) {
 			section(""){
@@ -100,12 +105,12 @@ def initialize() {
 	]
 	state.data = [:]
 	state.lookup = [
-		operatingState: [:],
+		thermostatOperatingState: [:],
 		thermostatFanMode: [:],
 		thermostatMode: [:]
 	]
 	state.list = [
-		operatingState: [],
+		thermostatOperatingState: [],
 		thermostatFanMode: [],
 		thermostatMode: []
 	]
@@ -153,8 +158,8 @@ def initialize() {
 	}
 	apiGet("/DBAcessService.svc/GetTstatLookupInfo", [name: "System_Status", langnumber: 0]) { response ->
 		response.data.tStatlookupInfo.each {
-			state.lookup.operatingState.putAt(it.value, translateDesc(it.description))
-			state.list.operatingState.add(translateDesc(it.description))
+			state.lookup.thermostatOperatingState.putAt(it.value, translateDesc(it.description))
+			state.list.thermostatOperatingState.add(translateDesc(it.description))
 		}
 	}
 	
@@ -267,7 +272,7 @@ private updateDeviceChildData() {
 	def childDevices = getAllChildDevices()
 	childDevices.each { device ->
 		def childDevicesGateway = device.deviceNetworkId.split("\\|")[1]
-		apiGet("/DBAcessService.svc/GetTStatInfoList", [GatewaySN: childDevicesGateway, TempUnit: "0", Cancel_Away: "-1"]) { response ->
+		apiGet("/DBAcessService.svc/GetTStatInfoList", [GatewaySN: childDevicesGateway, TempUnit: settings.temperatureUnit, Cancel_Away: "-1"]) { response ->
 			if (response.status == 200) {
 				response.data.tStatInfo.each { 
 					//log.debug "response: " + it
@@ -278,7 +283,9 @@ private updateDeviceChildData() {
 						heatingSetpoint: it.Heat_Set_Point,
 						thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode.toString(), true ),
 						thermostatFanMode: lookupInfo( "thermostatFanMode", it.Fan_Mode.toString(), true ),
-						operatingState: lookupInfo( "operatingState", it.System_Status.toString(), true )
+						thermostatOperatingState: lookupInfo( "thermostatOperatingState", it.System_Status.toString(), true ),
+						thermostatProgramMode: it.Program_Schedule_Mode,
+						thermostatProgramSelection: it.Program_Schedule_Selection
 					]
 				}
 			}
@@ -302,11 +309,11 @@ def lookupInfo( name, value, mode ) {
 			return state.lookup.thermostatMode.find{it.value==value}?.key
 		}	
 	}
-	if (name == "operatingState") {
+	if (name == "thermostatOperatingState") {
 		if (mode) {
-			return state.lookup.operatingState.getAt(value)
+			return state.lookup.thermostatOperatingState.getAt(value)
 		} else {
-			return state.lookup.operatingState.find{it.value==value}?.key
+			return state.lookup.thermostatOperatingState.find{it.value==value}?.key
 		}	
 	}
 }
@@ -319,14 +326,11 @@ def refresh() {
 		runNow: true
 	]
 	
-    
-    
 	//update device to state data
 	def updated = updateDeviceData()
 	
-    //log.debug "state data: " + state.data
-    //log.debug "state lookup: " + state.lookup
-    
+	//log.debug "state data: " + state.data
+	//log.debug "state lookup: " + state.lookup
     
 	//force devices to poll to get the latest status
 	if (updated) { 
@@ -364,7 +368,7 @@ def sendCommand(child, thermostatData = []) {
 		Heat_Set_Point: state.data[child.device.deviceNetworkId].heatingSetpoint,
 		Fan_Mode: lookupInfo("thermostatFanMode",state.data[child.device.deviceNetworkId].thermostatFanMode,false),
 		Operation_Mode: lookupInfo("thermostatMode",state.data[child.device.deviceNetworkId].thermostatMode,false),
-		Pref_Temp_Units: 0,
+		Pref_Temp_Units: getTemperatureUnit(),
 		Zone_Number: 0,
 		GatewaySN: getDeviceGatewaySN(child) 
 	] 
@@ -394,4 +398,16 @@ def translateDesc(value) {
 		case "heat or cool"  : return "auto"
 		default: return value
 	}
+}
+
+def getTemperatureUnit() {
+	return (settings["temperatureUnit"])?settings["temperatureUnit"]:"F"
+}
+
+def getThermostatProgramMode(child) {
+	return (state?.data[child.device.deviceNetworkId]?.getAt("thermostatProgramMode"))?state?.data[child.device.deviceNetworkId]?.getAt("thermostatProgramMode"):"0"
+}
+
+def getThermostatProgramSelection(child) {
+	return (state?.data[child.device.deviceNetworkId]?.getAt("thermostatProgramSelection"))?state?.data[child.device.deviceNetworkId]?.getAt("thermostatProgramSelection"):"1"
 }
