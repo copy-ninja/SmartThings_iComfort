@@ -1,4 +1,35 @@
-metadata {
+/**
+ *	iComfort Thermostat SmartDevice
+ *
+ *	Author: Jason Mok
+ *	Date: 2015-01-10
+ *
+ ***************************
+ *
+ *  Copyright 2015 Jason Mok
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ **************************
+ *
+ * REQUIREMENTS:
+ * Refer to iComfort SmartApp
+ *
+ **************************
+ * 
+ * USAGE:
+ * Put this in Device Type. Don't install until you have all other device types scripts added
+ * Refer to iComfort SmartApp
+ *
+ */
+ metadata {
 	definition (name: "iComfort Thermostat", namespace: "copy-ninja", author: "Jason Mok") {
 		capability "Thermostat"
 		capability "Relative Humidity Measurement"
@@ -14,6 +45,7 @@ metadata {
 		command "switchMode"
 		command "switchFanMode"
 		command "switchProgram"
+		command "setThermostatProgram"
 	}
 
 	simulator { }
@@ -54,7 +86,7 @@ metadata {
 				]
 			)
 		}
-		standardTile("thermostatOperatingState", "device.thermostatOperatingState", canChangeIcon: false) {
+		standardTile("thermostatOperatingState", "device.thermostatOperatingState", canChangeIcon: false, decoration: "flat") {
 			state("idle",            icon: "st.thermostat.ac.air-conditioning", label: "Idle")
 			state("waiting",         icon: "st.thermostat.ac.air-conditioning", label: "Waiting")
 			state("heating",         icon: "st.thermostat.heating")
@@ -76,7 +108,7 @@ metadata {
 			state("circulate", action:"switchFanMode", nextState: "circulate",  icon: "st.thermostat.fan-circulate")
 			state("off",       action:"switchFanMode", nextState: "off",        icon: "st.thermostat.fan-off")
 		}
-		standardTile("heatLevelUp", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
+		standardTile("heatLevelUp", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat" ) {
 			state("heatLevelUp",   action:"heatLevelUp",   icon:"st.thermostat.thermostat-up", backgroundColor:"#F7C4BA")
 		}        
 		valueTile("heatingSetpoint", "device.heatingSetpoint", inactiveLabel: false) {
@@ -98,7 +130,7 @@ metadata {
 		standardTile("heatLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
 			state("heatLevelDown", action:"heatLevelDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#F7C4BA")
 		}        
-		standardTile("coolLevelUp", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
+		standardTile("coolLevelUp", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat" ) {
 			state("coolLevelUp",   action:"coolLevelUp",   icon:"st.thermostat.thermostat-up" , backgroundColor:"#BAEDF7")
 		}
 		valueTile("coolingSetpoint", "device.coolingSetpoint", inactiveLabel: false) {
@@ -139,10 +171,7 @@ def initialize() {
 	state.polling = [ 
 		last: 0,
 		runNow: true
-	]
-	state.thermostatProgramMode = parent.getThermostatProgramMode(this)
-	state.thermostatProgramSelection = parent.getThermostatProgramSelection(this)
-	
+	]	
 	refresh() 
 }
 
@@ -153,95 +182,93 @@ def refresh() {
 	parent.refresh() 
 }
 
-def poll() { 
-	updateThermostatData(parent.getDeviceStatus(this))
-}
+def poll() { updateThermostatData(parent.getDeviceStatus(this.device)) }
 
 def updateThermostatData(thermostatData) {
 	//update the state data
 	def next = (state.polling.last?:0) + 15000  //will not update if it's not more than 15 seconds. this is to stop polling from updating all the state data.
-	//if (true) {
+
 	if ((now() > next) || (state.polling.runNow)) {
 		state.polling.last = now()
 		state.polling.runNow = false
 		
+		def thermostatProgramSelection
+		def thermostatProgramMode = (device.currentValue("thermostatProgram") == "Manual")?"0":"1"
+		def thermostatMode = (device.currentState("thermostatMode")?.value)?device.currentState("thermostatMode")?.value:"auto"
+		
 		thermostatData.each { name, value -> 
-			log.debug "Sending Event: " + name + " Value: " + value
 			if (name == "temperature" || name == "coolingSetpoint" || name == "heatingSetpoint") {
-				sendEvent(name: name, value: value, unit: parent.getTemperatureUnit())
+				def displayValue  = String.format("%.1f", (Math.round(value * 20) / 20))
+				sendEvent(name: name, value: displayValue as String, unit: parent.getTemperatureUnit())
+				log.debug "Sending Event: " + [name, value, displayValue, parent.getTemperatureUnit()]
 			} else if (name == "humidity") {
 				sendEvent(name: name, value: value, unit: "Humidity")
+				log.debug "Sending Event: " + [name, value, "Humidity"]
 			} else if (name == "thermostatProgramMode") {
-				state.thermostatProgramMode = value
+				thermostatProgramMode = value
 			} else if (name == "thermostatProgramSelection") {
-				state.thermostatProgramSelection = value
+				thermostatProgramSelection = value
 			} else if (name == "thermostatMode") {
-				state.thermostatMode = value
+				thermostatMode = value
 			} else {
 				sendEvent(name: name, value: value)
+				log.debug "Sending Misc Event: " + [name, value]
 			}
-			
 		}
-		
-		if (state.thermostatProgramMode == "0") {
+        		
+		if (thermostatProgramMode == "0") {
+			sendEvent(name: "thermostatMode", value: thermostatMode)
 			sendEvent(name: "thermostatProgram", value: "Manual")
-			sendEvent(name: "thermostatMode", value: state.thermostatMode)
+			log.debug "Sending Event: " + ["thermostatMode", thermostatMode]
+			log.debug "Sending Event: " + ["thermostatProgram", "Manual"]			
 		} else {
 			sendEvent(name: "thermostatMode", value: "program") 
-			sendEvent(name: "thermostatProgram", value: "Program" + (state.thermostatProgramSelection + 1).toString())
+			log.debug "Sending Event: " + ["thermostatMode", "program"]
+			if (thermostatProgramSelection) {
+				sendEvent(name: "thermostatProgram", value: parent.getThermostatProgramName(this.device, thermostatProgramSelection))
+				log.debug "Sending Event: " + ["thermostatProgram", parent.getThermostatProgramName(this.device, thermostatProgramSelection)]
+			}
 		}
 	}
 }
 
 def setHeatingSetpoint(Number heatingSetpoint) {
 	// define maximum & minimum for heating setpoint 
-    def minHeat = (parent.getTemperatureUnit()=="C")? 4.50 : 40.00
-    def maxHeat = (parent.getTemperatureUnit()=="C")? 32.00 : 90.00
-    def diffHeat = (parent.getTemperatureUnit()=="C")? 1.50 : 3.00
+	def minHeat = parent.getSetPointLimit(this.device, "heatingSetPointLow")
+	def maxHeat = parent.getSetPointLimit(this.device, "heatingSetPointHigh")
+	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint")
 	heatingSetpoint = (heatingSetpoint < minHeat)? minHeat : heatingSetpoint
 	heatingSetpoint = (heatingSetpoint > maxHeat)? maxHeat : heatingSetpoint
-	
-	
+
+	log.debug "Heat Setpoint Limits: " + [minHeat, maxHeat, diffHeat]
 	// check cooling setpoint 
 	def heatSetpointDiff = heatingSetpoint + diffHeat
 	def coolingSetpoint = device.currentValue("coolingSetpoint")
 	coolingSetpoint = (heatSetpointDiff > coolingSetpoint)? heatSetpointDiff : coolingSetpoint
-	
-	def thermostatData = [ 
-		coolingSetpoint: coolingSetpoint, 
-		heatingSetpoint: heatingSetpoint
-	]
-    
-	setThermostatData(thermostatData)
+	    
+	setThermostatData([coolingSetpoint: coolingSetpoint, heatingSetpoint: heatingSetpoint])
 }
 
 def setCoolingSetpoint(Number coolingSetpoint) { 
 	// define maximum & minimum for cooling setpoint 
-    def minCool = (parent.getTemperatureUnit()=="C")? 15.50 : 60.00
-    def maxCool = (parent.getTemperatureUnit()=="C")? 37.00 : 99.00
-    def diffHeat = (parent.getTemperatureUnit()=="C")? 1.50 : 3.00
+	def minCool = parent.getSetPointLimit(this.device, "coolingSetPointLow")
+	def maxCool = parent.getSetPointLimit(this.device, "coolingSetPointHigh")
+	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint")
 	coolingSetpoint = (coolingSetpoint < minCool)? minCool : coolingSetpoint
 	coolingSetpoint = (coolingSetpoint > maxCool)? maxCool : coolingSetpoint
 	
 	// check heating setpoint 
 	def coolSetpointDiff = coolingSetpoint - diffHeat
-	def heatingSetpoint = device.currentValue("heatingSetpoint").toInteger()
+	def heatingSetpoint = device.currentValue("heatingSetpoint")
 	heatingSetpoint = (coolSetpointDiff < heatingSetpoint)? coolSetpointDiff : heatingSetpoint
 	
-	def thermostatData = [ 
-		coolingSetpoint: coolingSetpoint, 
-		heatingSetpoint: heatingSetpoint
-	]
-	
-	setThermostatData(thermostatData)
+	setThermostatData([coolingSetpoint: coolingSetpoint, heatingSetpoint: heatingSetpoint])
 }
 
 
 def switchMode() {
-	log.debug "in switchMode"
 	def currentMode = device.currentState("thermostatMode")?.value
-	def returnCommand
-
+	//log.debug "currentMode: " + currentMode
 	switch (currentMode) {
 		case "off":
 			setThermostatMode("heat")
@@ -255,6 +282,9 @@ def switchMode() {
 		case "auto":
 			setThermostatMode("off")
 			break
+		case "program":
+			setThermostatMode("auto")
+			break
 		default:
 			setThermostatMode("auto")
 	}
@@ -267,17 +297,8 @@ def emergencyHeat() { setThermostatMode("emergency heat") }
 def cool() { setThermostatMode("cool") }
 def auto() { setThermostatMode("auto") }
 
-def setThermostatMode(mode) {
-	def thermostatData = [ thermostatMode: mode ]
-	setThermostatData(thermostatData)
-}
-
-
 def switchFanMode() {
 	def currentFanMode = device.currentState("thermostatFanMode")?.value
-	log.debug "switching fan from current mode: $currentFanMode"
-	def returnCommand
-
 	switch (currentFanMode) {
 		case "auto":
 			setThermostatFanMode("on")
@@ -294,47 +315,41 @@ def switchFanMode() {
 	if(!currentFanMode) { setThermostatFanMode("auto") }
 }
 
+def setThermostatMode(mode) { 
+	def thermostatProgramMode = (device.currentValue("thermostatProgram") == "Manual")?"0":"1"
+	if (thermostatProgramMode != "0") {
+		parent.setProgram(this.device, "0", state.thermostatProgramSelection)
+		setThermostatData([ thermostatProgramMode: "0", thermostatMode: mode ])
+	} else {
+		setThermostatData([ thermostatMode: mode ])
+	}
+}
+
 def fanOn() { setThermostatFanMode("on") }
 def fanAuto() { setThermostatFanMode("auto") }
 def fanCirculate() { setThermostatFanMode("circulate") }
-
-def setThermostatFanMode(fanMode) {
-	def thermostatData = [ thermostatFanMode: fanMode ]
-	setThermostatData(thermostatData)
-}
-
-def heatLevelUp() {
-	def setpoint = device.currentValue("heatingSetpoint") + stepLevel()
-	//log.debug "Setpoint: " + setpoint
-	setHeatingSetpoint(setpoint.toInteger())    
-}
-def heatLevelDown() {
-	def setpoint = device.currentValue("heatingSetpoint") - stepLevel() 
-	//log.debug "Setpoint: " + setpoint
-	setHeatingSetpoint(setpoint.toInteger())    
-}
-def coolLevelUp() {
-	def setpoint = device.currentValue("coolingSetpoint") + stepLevel()
-	//log.debug "Setpoint: " + setpoint 
-	setCoolingSetpoint(setpoint.toInteger())
-}
-
-def coolLevelDown() {
-	def setpoint = device.currentValue("coolingSetpoint") - stepLevel()
-	//log.debug "Setpoint: " + setpoint
-	setCoolingSetpoint(setpoint.toInteger())
-}
-
-def stepLevel() {
-	return (parent.getTemperatureUnit()=="C")? 0.5 : 1
-}
+def setThermostatFanMode(fanMode) {	setThermostatData([ thermostatFanMode: fanMode ]) }
+def heatLevelUp() {	setHeatingSetpoint(device.currentValue("heatingSetpoint") + stepLevel()) }
+def heatLevelDown() { setHeatingSetpoint(device.currentValue("heatingSetpoint") - stepLevel()) }
+def coolLevelUp() { setCoolingSetpoint(device.currentValue("coolingSetpoint") + stepLevel()) }
+def coolLevelDown() { setCoolingSetpoint(device.currentValue("coolingSetpoint") - stepLevel()) }
+def stepLevel() { return (parent.getTemperatureUnit()=="C")? 0.5 : 1  }
 
 def switchProgram() {
+	def currentProgram = device.currentValue("thermostatProgram")
+	def nextProgramID = parent.getThermostatProgramNext(this.device, currentProgram)
+	setThermostatProgram(nextProgramID)
+}
+
+def setThermostatProgram(programID) {
+	state.polling.runNow = true
+	updateThermostatData([thermostatProgramMode: "1", thermostatProgramSelection: programID])
+	parent.setProgram(this.device, "1", programID)
 }
 
 def setThermostatData(thermostatData) {
 	state.polling.runNow = true
 	log.debug "ThermostatData: " + thermostatData
 	updateThermostatData(thermostatData)
-	parent.sendCommand(this, thermostatData)
+	parent.setThermostat(this.device, thermostatData)
 }
