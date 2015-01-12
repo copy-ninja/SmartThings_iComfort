@@ -2,7 +2,7 @@
  *  iComfort Service Manager SmartApp
  * 
  *  Author: Jason Mok
- *  Date: 2015-01-01
+ *  Date: 2015-01-10
  *
  ***************************
  *
@@ -25,9 +25,9 @@ definition(
 	author: "Jason Mok",
 	description: "Connect iComfort to control your thermostats",
 	category: "SmartThings Labs",
-	iconUrl:   "http://smartthings.copyninja.net/icons/Lennox_iComfort@1x.png",
-	iconX2Url: "http://smartthings.copyninja.net/icons/Lennox_iComfort@2x.png",
-	iconX3Url: "http://smartthings.copyninja.net/icons/Lennox_iComfort@3x.png"
+	iconUrl:   "http://smartthings.copyninja.net/icons/iComfort@1x.png",
+	iconX2Url: "http://smartthings.copyninja.net/icons/iComfort@2x.png",
+	iconX3Url: "http://smartthings.copyninja.net/icons/iComfort@3x.png"
 )
 
 preferences {
@@ -43,10 +43,10 @@ def prefLogIn() {
 			input("username", "text", title: "Username", description: "iComfort Username")
 			input("password", "password", title: "Password", description: "iComfort password")
 		}
-/*		section("Display"){
+		section("Display"){
 			input(name: "temperatureUnit", title: "Temperature Unit", type: "enum", defaultValue: "F", metadata:[values:[F:"°F",C:"°C"]] )
 		}  
-*/		section("Connectivity"){
+		section("Connectivity"){
 			input(name: "polling", title: "Server Polling (in Minutes)", type: "int", description: "in minutes", defaultValue: "5" )
 		}              
 	}
@@ -57,7 +57,7 @@ def prefListDevice() {
 		def thermostatList = getThermostatList()
 		if (thermostatList) {
 			return dynamicPage(name: "prefListDevice",  title: "Thermostats", install:true, uninstall:true) {
-				section("Select which thermostat to use"){
+				section("Select which thermostat/zones to use"){
 					input(name: "thermostat", type: "enum", required:false, multiple:true, metadata:[values:thermostatList])
 				}
 			}
@@ -102,6 +102,8 @@ def initialize() {
 		thermostatFanMode: [:],
 		thermostatMode: [:],
 		program: [:],
+		temperatureRangeC: [:],
+		temperatureRangeF: [:],
 		coolingSetPointHigh: [:],
 		coolingSetPointLow: [:],
 		heatingSetPointHigh: [:],
@@ -235,6 +237,15 @@ private getLookups() {
 			state.list.thermostatOperatingState.add(translateDesc(it.description))
 		}
 	}    
+    
+	//Get Temperature lookups
+	apiGet("/DBAcessService.svc/GetTemperatureRange", [highpoint: 37, lowpoint: 4]) { response ->
+		response.data.each {
+			def temperatureLookup = it.Value.split("\\|")
+			state.lookup.temperatureRangeC.putAt(temperatureLookup[0].toString(), temperatureLookup[1].toString())
+            state.lookup.temperatureRangeF.putAt(temperatureLookup[1].toString(), temperatureLookup[0].toString())
+		}
+	}    
 	
 	def childDevices = getAllChildDevices()
 	childDevices.each { device ->
@@ -245,21 +256,19 @@ private getLookups() {
 		apiGet("/DBAcessService.svc/GetTStatScheduleInfo", [GatewaySN: childDevicesGateway]) { response ->
 			if (response.status == 200) {
 				response.data.tStatScheduleInfo.each {
-					state.lookup.program[device.deviceNetworkId].putAt(it.Schedule_Number.toString(), "Program " + (it.Schedule_Number + 1) + ": " + it.Schedule_Name)
-					state.list.program[device.deviceNetworkId].add("Program " + (it.Schedule_Number + 1) + ": " + it.Schedule_Name)
+					state.lookup.program[device.deviceNetworkId].putAt(it.Schedule_Number.toString(), "Program " + (it.Schedule_Number + 1) + ":\n" + it.Schedule_Name)
+					state.list.program[device.deviceNetworkId].add("Program " + (it.Schedule_Number + 1) + ":\n" + it.Schedule_Name)
 				}      
 			}
 		}
 		
 		//Get Limit Lookups
-        
-		apiGet("/DBAcessService.svc/GetGatewayInfo", [GatewaySN: childDevicesGateway, TempUnit: (getTemperatureUnit()=="F")?0:1]) { response ->
+		apiGet("/DBAcessService.svc/GetGatewayInfo", [GatewaySN: childDevicesGateway, TempUnit: "0"]) { response ->
 			if (response.status == 200) {
 				state.lookup.coolingSetPointHigh.putAt(device.deviceNetworkId, response.data.Cool_Set_Point_High_Limit)
 				state.lookup.coolingSetPointLow.putAt(device.deviceNetworkId, response.data.Cool_Set_Point_Low_Limit)
 				state.lookup.heatingSetPointHigh.putAt(device.deviceNetworkId, response.data.Heat_Set_Point_High_Limit)
 				state.lookup.heatingSetPointLow.putAt(device.deviceNetworkId, response.data.Heat_Set_Point_Low_Limit)
-				
 				state.lookup.differenceSetPoint.putAt(device.deviceNetworkId, response.data.Heat_Cool_Dead_Band)
 			}
 		}
@@ -435,7 +444,7 @@ def setThermostat(childDevice, thermostatData = []) {
 			Pref_Temp_Units: (getTemperatureUnit()=="F")?0:1,
 			Zone_Number: getDeviceZone(childDevice),
 			GatewaySN: getDeviceGatewaySN(childDevice) 
-        ]
+        	]
 	]
     
 	try {
@@ -458,8 +467,10 @@ def setProgram(childDevice, scheduleMode, scheduleSelection) {
 				state.data[childDevice.deviceNetworkId].thermostatFanMode = lookupInfo("thermostatFanMode",response.data.Fan_Mode,true)
 			}
 		}
+		state.data[childDevice.deviceNetworkId].thermostatProgramSelection = scheduleSelection
 	}
-	
+	state.data[childDevice.deviceNetworkId].thermostatProgramMode = scheduleMode
+		
 	// set up final parameters for program
 	def apiParamsProgram = [ 
 		uri: "https://" + settings.username + ":" + settings.password + "@services.myicomfort.com",
@@ -503,7 +514,7 @@ def setProgram(childDevice, scheduleMode, scheduleSelection) {
 		log.debug "API Error: $e"
 	}
 	
-	refresh()
+	//refresh()
 	return true
 }
 
@@ -535,3 +546,14 @@ def getThermostatProgramNext(childDevice, value) {
 }
 
 def getSetPointLimit( childDevice, limitType ) { return  state?.lookup?.getAt(limitType)?.getAt(childDevice.deviceNetworkId) }
+
+def convertToUnit(value, unit) {
+	def returnValue
+	if (unit == "F") {
+		returnValue = new BigDecimal(state?.lookup?.temperatureRangeC[value.toString()])
+	}
+    if (unit == "C") {
+		returnValue = new BigDecimal(state?.lookup?.temperatureRangeF[value.toString()])
+	}
+	return returnValue
+}
