@@ -40,8 +40,8 @@ def prefLogIn() {
 	def showUninstall = username != null && password != null 
 	return dynamicPage(name: "prefLogIn", title: "Connect to iComfort", nextPage:"prefListDevice", uninstall:showUninstall, install: false) {
 		section("Login Credentials"){
-			input("username", "text", title: "Username", description: "iComfort Username")
-			input("password", "password", title: "Password", description: "iComfort password")
+			input("username", "text", title: "Username", description: "iComfort Username (case sensitive)")
+			input("password", "password", title: "Password", description: "iComfort password (case sensitive)")
 		}
 		section("Display"){
 			input(name: "temperatureUnit", title: "Temperature Unit", type: "enum", defaultValue: "F", metadata:[values:[F:"°F",C:"°C"]] )
@@ -514,7 +514,6 @@ def setProgram(childDevice, scheduleMode, scheduleSelection) {
 		log.debug "API Error: $e"
 	}
 	
-	//refresh()
 	return true
 }
 
@@ -552,7 +551,7 @@ def convertToUnit(value, unit) {
 	if (unit == "F") {
 		returnValue = new BigDecimal(state?.lookup?.temperatureRangeC[value.toString()])
 	}
-    if (unit == "C") {
+	if (unit == "C") {
 		returnValue = new BigDecimal(state?.lookup?.temperatureRangeF[value.toString()])
 	}
 	return returnValue
