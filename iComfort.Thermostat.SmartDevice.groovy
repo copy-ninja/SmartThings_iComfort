@@ -60,13 +60,13 @@
 		valueTile("temperatureDisplay", "device.temperatureDisplay", width: 2, height: 2) {
 			state("temperature", label:'${currentValue}', 
 				backgroundColors:[
-					[value: "31.0°F", color: "#153591"],
-					[value: "44.0°F", color: "#1e9cbb"],
-					[value: "59.0°F", color: "#90d2a7"],
-					[value: "74.0°F", color: "#44b621"],
-					[value: "84.0°F", color: "#f1d801"],
-					[value: "95.0°F", color: "#d04e00"],
-					[value: "96.0°F", color: "#bc2323"],
+					[value: "31°", color: "#153591"],
+					[value: "44°", color: "#1e9cbb"],
+					[value: "59°", color: "#90d2a7"],
+					[value: "74°", color: "#44b621"],
+					[value: "84°", color: "#f1d801"],
+					[value: "95°", color: "#d04e00"],
+					[value: "96°", color: "#bc2323"],
 					[value: " 0.0°C", color: "#153591"],
 					[value: " 6.0°C", color: "#1e9cbb"],
 					[value: "15.0°C", color: "#90d2a7"],
@@ -123,18 +123,18 @@
 		valueTile("heatingSetpointDisplay", "device.heatingSetpointDisplay", inactiveLabel: false) {
 			state("heat", label:'${currentValue}', 
 				backgroundColors:[
-					[value: "40.0°F", unit: "F", color: "#f49b88"],
-					[value: "50.0°F", unit: "F", color: "#f28770"],
-					[value: "60.0°F", unit: "F", color: "#f07358"],
-					[value: "70.0°F", unit: "F", color: "#ee5f40"],
-					[value: "80.0°F", unit: "F", color: "#ec4b28"],
-					[value: "90.0°F", unit: "F", color: "#ea3811"],
-					[value: "5.0°C",  unit: "C", color: "#f49b88"],
-					[value: "10.0°C", unit: "C", color: "#f28770"],
-					[value: "15.0°C", unit: "C", color: "#f07358"],
-					[value: "20.0°C", unit: "C", color: "#ee5f40"],
-					[value: "25.0°C", unit: "C", color: "#ec4b28"],
-					[value: "30.0°C", unit: "C", color: "#ea3811"]
+					[value: "40°",  color: "#f49b88"],
+					[value: "50°",  color: "#f28770"],
+					[value: "60°",  color: "#f07358"],
+					[value: "70°",  color: "#ee5f40"],
+					[value: "80°",  color: "#ec4b28"],
+					[value: "90°",  color: "#ea3811"],
+					[value: "5.0°C",   color: "#f49b88"],
+					[value: "10.0°C",  color: "#f28770"],
+					[value: "15.0°C",  color: "#f07358"],
+					[value: "20.0°C",  color: "#ee5f40"],
+					[value: "25.0°C",  color: "#ec4b28"],
+					[value: "30.0°C",  color: "#ea3811"]
 				])
 		}
 		standardTile("heatLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
@@ -149,18 +149,18 @@
 		valueTile("coolingSetpointDisplay", "device.coolingSetpointDisplay", inactiveLabel: false) {
 			state("cool", label:'${currentValue}', 
 				backgroundColors:[
-					[value: "40°F", unit: "F", color: "#88e1f4"],
-					[value: "50°F", unit: "F", color: "#70dbf2"],
-					[value: "60°F", unit: "F", color: "#58d5f0"],
-					[value: "70°F", unit: "F", color: "#40cfee"],
-					[value: "80°F", unit: "F", color: "#28c9ec"],
-					[value: "90°F", unit: "F", color: "#11c3ea"],
-					[value:  "5°C", unit: "C", color: "#88e1f4"],
-					[value: "10°C", unit: "C", color: "#70dbf2"],
-					[value: "15°C", unit: "C", color: "#58d5f0"],
-					[value: "20°C", unit: "C", color: "#40cfee"],
-					[value: "25°C", unit: "C", color: "#28c9ec"],
-					[value: "30°C", unit: "C", color: "#11c3ea"]
+					[value: "40°",  color: "#88e1f4"],
+					[value: "50°",  color: "#70dbf2"],
+					[value: "60°",  color: "#58d5f0"],
+					[value: "70°",  color: "#40cfee"],
+					[value: "80°",  color: "#28c9ec"],
+					[value: "90°",  color: "#11c3ea"],
+					[value:  "5.0°C",  color: "#88e1f4"],
+					[value: "10.0°C",  color: "#70dbf2"],
+					[value: "15.0°C",  color: "#58d5f0"],
+					[value: "20.0°C",  color: "#40cfee"],
+					[value: "25.0°C",  color: "#28c9ec"],
+					[value: "30.0°C",  color: "#11c3ea"]
 				])
 		}
 		standardTile("coolLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
@@ -212,7 +212,12 @@ def updateThermostatData(thermostatData) {
 		
 		thermostatData.each { name, value -> 
 			if (name == "temperature" || name == "coolingSetpoint" || name == "heatingSetpoint") {
-				def displayValue  = String.format("%.1f", (Math.round(value * 20) / 20)) + "°" + parent.getTemperatureUnit()
+				def displayValue = value.toString()
+				if (parent.getTemperatureUnit() == "F") {
+					displayValue  = String.format("%.1f", (Math.round(value * 20) / 20)) + "°" + parent.getTemperatureUnit()
+				} else {
+					displayValue  = String.format("%.0f", value) + "°"
+				}
 				def displayName = name + "Display"
 				sendEvent(name: displayName, value: displayValue as String)
 				log.debug "Sending Event: " + [displayName, displayValue]
