@@ -60,35 +60,35 @@
 		valueTile("temperatureDisplay", "device.temperatureDisplay", width: 2, height: 2) {
 			state("temperature", label:'${currentValue}', 
 				backgroundColors:[
-					[value: "31°", color: "#153591"],
-					[value: "44°", color: "#1e9cbb"],
-					[value: "59°", color: "#90d2a7"],
-					[value: "74°", color: "#44b621"],
-					[value: "84°", color: "#f1d801"],
-					[value: "95°", color: "#d04e00"],
-					[value: "96°", color: "#bc2323"],
-					[value: " 0.0°C", color: "#153591"],
-					[value: " 6.0°C", color: "#1e9cbb"],
-					[value: "15.0°C", color: "#90d2a7"],
-					[value: "23.0°C", color: "#44b621"],
-					[value: "29.0°C", color: "#f1d801"],
-					[value: "35.0°C", color: "#d04e00"],
-					[value: "37.0°C", color: "#bc2323"]
+					[value: "31°", unit: "F", color: "#153591"],
+					[value: "44°", unit: "F", color: "#1e9cbb"],
+					[value: "59°", unit: "F", color: "#90d2a7"],
+					[value: "74°", unit: "F", color: "#44b621"],
+					[value: "84°", unit: "F", color: "#f1d801"],
+					[value: "95°", unit: "F", color: "#d04e00"],
+					[value: "96°", unit: "F", color: "#bc2323"],
+					[value: "0.0°", unit: "C", color: "#153591"],
+					[value: "6.0°", unit: "C", color: "#1e9cbb"],
+					[value: "15.0°", unit: "C", color: "#90d2a7"],
+					[value: "23.0°", unit: "C", color: "#44b621"],
+					[value: "29.0°", unit: "C", color: "#f1d801"],
+					[value: "35.0°", unit: "C", color: "#d04e00"],
+					[value: "37.0°", unit: "C", color: "#bc2323"]
 				]
 			)
 		}
 		valueTile("humidity", "device.humidity", inactiveLabel: false) {
 			state("humidity", label:'${currentValue}% \nHumidity' , unit: "Humidity",
 				backgroundColors:[
-					[value: 20, unit: "Humidity", color: "#b2d3f9"],
-					[value: 30, unit: "Humidity", color: "#99c5f8"],
-					[value: 35, unit: "Humidity", color: "#7fb6f6"],
-					[value: 40, unit: "Humidity", color: "#66a8f4"],
-					[value: 45, unit: "Humidity", color: "#4c99f3"],
-					[value: 50, unit: "Humidity", color: "#328bf1"],
-					[value: 55, unit: "Humidity", color: "#197cef"],
-					[value: 60, unit: "Humidity", color: "#006eee"],
-					[value: 70, unit: "Humidity", color: "#0063d6"],
+					[value: 20, unit: "", color: "#b2d3f9"],
+					[value: 30, unit: "", color: "#99c5f8"],
+					[value: 35, unit: "", color: "#7fb6f6"],
+					[value: 40, unit: "", color: "#66a8f4"],
+					[value: 45, unit: "", color: "#4c99f3"],
+					[value: 50, unit: "", color: "#328bf1"],
+					[value: 55, unit: "", color: "#197cef"],
+					[value: 60, unit: "", color: "#006eee"],
+					[value: 70, unit: "", color: "#0063d6"],
 				]
 			)
 		}
@@ -123,18 +123,18 @@
 		valueTile("heatingSetpointDisplay", "device.heatingSetpointDisplay", inactiveLabel: false) {
 			state("heat", label:'${currentValue}', 
 				backgroundColors:[
-					[value: "40°",  color: "#f49b88"],
-					[value: "50°",  color: "#f28770"],
-					[value: "60°",  color: "#f07358"],
-					[value: "70°",  color: "#ee5f40"],
-					[value: "80°",  color: "#ec4b28"],
-					[value: "90°",  color: "#ea3811"],
-					[value: "5.0°C",   color: "#f49b88"],
-					[value: "10.0°C",  color: "#f28770"],
-					[value: "15.0°C",  color: "#f07358"],
-					[value: "20.0°C",  color: "#ee5f40"],
-					[value: "25.0°C",  color: "#ec4b28"],
-					[value: "30.0°C",  color: "#ea3811"]
+					[value: "40°", unit: "F", color: "#f49b88"],
+					[value: "50°", unit: "F", color: "#f28770"],
+					[value: "60°", unit: "F", color: "#f07358"],
+					[value: "70°", unit: "F", color: "#ee5f40"],
+					[value: "80°", unit: "F", color: "#ec4b28"],
+					[value: "90°", unit: "F", color: "#ea3811"],
+					[value: "5.0°",  unit: "C", color: "#f49b88"],
+					[value: "10.0°", unit: "C", color: "#f28770"],
+					[value: "15.0°", unit: "C", color: "#f07358"],
+					[value: "20.0°", unit: "C", color: "#ee5f40"],
+					[value: "25.0°", unit: "C", color: "#ec4b28"],
+					[value: "30.0°", unit: "C", color: "#ea3811"]
 				])
 		}
 		standardTile("heatLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
@@ -149,18 +149,18 @@
 		valueTile("coolingSetpointDisplay", "device.coolingSetpointDisplay", inactiveLabel: false) {
 			state("cool", label:'${currentValue}', 
 				backgroundColors:[
-					[value: "40°",  color: "#88e1f4"],
-					[value: "50°",  color: "#70dbf2"],
-					[value: "60°",  color: "#58d5f0"],
-					[value: "70°",  color: "#40cfee"],
-					[value: "80°",  color: "#28c9ec"],
-					[value: "90°",  color: "#11c3ea"],
-					[value:  "5.0°C",  color: "#88e1f4"],
-					[value: "10.0°C",  color: "#70dbf2"],
-					[value: "15.0°C",  color: "#58d5f0"],
-					[value: "20.0°C",  color: "#40cfee"],
-					[value: "25.0°C",  color: "#28c9ec"],
-					[value: "30.0°C",  color: "#11c3ea"]
+					[value: "40°", unit: "F", color: "#88e1f4"],
+					[value: "50°", unit: "F", color: "#70dbf2"],
+					[value: "60°", unit: "F", color: "#58d5f0"],
+					[value: "70°", unit: "F", color: "#40cfee"],
+					[value: "80°", unit: "F", color: "#28c9ec"],
+					[value: "90°", unit: "F", color: "#11c3ea"],
+					[value:  "5.0°", unit: "C",  color: "#88e1f4"],
+					[value: "10.0°", unit: "C",  color: "#70dbf2"],
+					[value: "15.0°", unit: "C",  color: "#58d5f0"],
+					[value: "20.0°", unit: "C",  color: "#40cfee"],
+					[value: "25.0°", unit: "C",  color: "#28c9ec"],
+					[value: "30.0°", unit: "C",  color: "#11c3ea"]
 				])
 		}
 		standardTile("coolLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
@@ -213,19 +213,15 @@ def updateThermostatData(thermostatData) {
 		thermostatData.each { name, value -> 
 			if (name == "temperature" || name == "coolingSetpoint" || name == "heatingSetpoint") {
 				def displayValue = value.toString()
-				if (parent.getTemperatureUnit() == "F") {
-					displayValue  = String.format("%.1f", (Math.round(value * 20) / 20)) + "°" + parent.getTemperatureUnit()
+				if (parent.getTemperatureUnit() == "C") {
+					displayValue  = String.format("%.1f", (Math.round(value * 20) / 20)) + "°"
 				} else {
 					displayValue  = String.format("%.0f", value) + "°"
 				}
 				def displayName = name + "Display"
-				sendEvent(name: displayName, value: displayValue as String)
-				log.debug "Sending Event: " + [displayName, displayValue]
+				sendEvent(name: displayName, value: displayValue as String, unit: parent.getTemperatureUnit(), displayed: false)
 				sendEvent(name: name, value: value , unit: parent.getTemperatureUnit())
 				log.debug "Sending Event: " + [name, value, parent.getTemperatureUnit()]
-			} else if (name == "humidity") {
-				sendEvent(name: name, value: value, unit: "Humidity")
-				log.debug "Sending Event: " + [name, value, "Humidity"]
 			} else if (name == "thermostatProgramMode") {
 				thermostatProgramMode = value
 			} else if (name == "thermostatProgramSelection") {
@@ -233,7 +229,7 @@ def updateThermostatData(thermostatData) {
 			} else if (name == "thermostatMode") {
 				thermostatMode = value
 			} else {
-				sendEvent(name: name, value: value)
+				sendEvent(name: name, value: value, displayed: false)
 				log.debug "Sending Misc Event: " + [name, value]
 			}
 		}
@@ -258,24 +254,15 @@ def setHeatingSetpoint(Number heatingSetpoint) {
 	// define maximum & minimum for heating setpoint 
 	def minHeat = parent.getSetPointLimit(this.device, "heatingSetPointLow")
 	def maxHeat = parent.getSetPointLimit(this.device, "heatingSetPointHigh")
-	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint")
+	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint").toInteger()
 	
-	def temperatureUnit = parent.getTemperatureUnit()
-	if (temperatureUnit == "C") { heatingSetpoint = parent.convertToUnit(heatingSetpoint, "F") }
-    
 	heatingSetpoint = (heatingSetpoint < minHeat)? minHeat : heatingSetpoint
 	heatingSetpoint = (heatingSetpoint > maxHeat)? maxHeat : heatingSetpoint
 
 	// check cooling setpoint 
-	def heatSetpointDiff = heatingSetpoint + diffHeat
+	def heatSetpointDiff = parent.getTemperatureNext(heatingSetpoint, diffHeat)
 	def coolingSetpoint = device.currentValue("coolingSetpoint")
-	if (temperatureUnit == "C") { coolingSetpoint = parent.convertToUnit(coolingSetpoint, "F") }
 	coolingSetpoint = (heatSetpointDiff > coolingSetpoint)? heatSetpointDiff : coolingSetpoint
-	
-	if (temperatureUnit == "C") { 
-		coolingSetpoint = parent.convertToUnit(coolingSetpoint, "C") 
-		heatingSetpoint = parent.convertToUnit(heatingSetpoint, "C")
-	}
     
 	setThermostatData([coolingSetpoint: coolingSetpoint, heatingSetpoint: heatingSetpoint])
 }
@@ -284,28 +271,19 @@ def setCoolingSetpoint(Number coolingSetpoint) {
 	// define maximum & minimum for cooling setpoint 
 	def minCool = parent.getSetPointLimit(this.device, "coolingSetPointLow")
 	def maxCool = parent.getSetPointLimit(this.device, "coolingSetPointHigh")
-	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint")
-
-	def temperatureUnit = parent.getTemperatureUnit()
-	if (temperatureUnit == "C") { coolingSetpoint = parent.convertToUnit(coolingSetpoint, "F") }
+	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint").toInteger()
 
 	coolingSetpoint = (coolingSetpoint < minCool)? minCool : coolingSetpoint
 	coolingSetpoint = (coolingSetpoint > maxCool)? maxCool : coolingSetpoint
 	
 	// check heating setpoint 
-	def coolSetpointDiff = coolingSetpoint - diffHeat
+	def coolSetpointDiff = parent.getTemperatureNext(coolingSetpoint, (diffHeat * -1))
+    log.debug "coolSetpointDiff : " + coolSetpointDiff
 	def heatingSetpoint = device.currentValue("heatingSetpoint")
-	if (temperatureUnit == "C") { heatingSetpoint = parent.convertToUnit(heatingSetpoint, "F") }
 	heatingSetpoint = (coolSetpointDiff < heatingSetpoint)? coolSetpointDiff : heatingSetpoint
-	
-	if (temperatureUnit == "C") { 
-		coolingSetpoint = parent.convertToUnit(coolingSetpoint, "C") 
-		heatingSetpoint = parent.convertToUnit(heatingSetpoint, "C")
-	}
-    
+	    
 	setThermostatData([coolingSetpoint: coolingSetpoint, heatingSetpoint: heatingSetpoint])
 }
-
 
 def switchMode() {
 	def currentMode = device.currentState("thermostatMode")?.value
@@ -371,44 +349,20 @@ def fanAuto() { setThermostatFanMode("auto") }
 def fanCirculate() { setThermostatFanMode("circulate") }
 def setThermostatFanMode(fanMode) {	setThermostatData([ thermostatFanMode: fanMode ]) }
 def heatLevelUp() {	
-	def heatingSetpoint = device.currentValue("coolingSetpoint")
-	if (parent.getTemperatureUnit() == "C") { 
-		def newHeatingSetpoint = parent.convertToUnit(heatingSetpoint, "F") + 1
-		heatingSetpoint = parent.convertToUnit(newHeatingSetpoint, "C")
-	} else { 
-		heatingSetpoint += 1 
-	}
-	setHeatingSetpoint(heatingSetpoint)  
+	def heatingSetpoint = device.currentValue("heatingSetpoint")
+	setHeatingSetpoint(parent.getTemperatureNext(heatingSetpoint, 1))   
 }
 def heatLevelDown() { 
-	def heatingSetpoint = device.currentValue("coolingSetpoint")
-	if (parent.getTemperatureUnit() == "C") { 
-		def newHeatingSetpoint = parent.convertToUnit(heatingSetpoint, "F") - 1
-		heatingSetpoint = parent.convertToUnit(newHeatingSetpoint, "C")
-	} else { 
-		heatingSetpoint -= 1 
-	}
-	setHeatingSetpoint(heatingSetpoint)  
+	def heatingSetpoint = device.currentValue("heatingSetpoint")
+	setHeatingSetpoint(parent.getTemperatureNext(heatingSetpoint, -1))  
 }
 def coolLevelUp() { 
 	def coolingSetpoint = device.currentValue("coolingSetpoint")
-	if (parent.getTemperatureUnit() == "C") { 
-		def newCoolingSetpoint = parent.convertToUnit(coolingSetpoint, "F") + 1
-		coolingSetpoint = parent.convertToUnit(newCoolingSetpoint, "C")
-	} else { 
-		coolingSetpoint += 1 
-	}
-	setCoolingSetpoint(coolingSetpoint)  
+	setCoolingSetpoint(parent.getTemperatureNext(coolingSetpoint, 1))  
 }
 def coolLevelDown() { 
 	def coolingSetpoint = device.currentValue("coolingSetpoint")
-	if (parent.getTemperatureUnit() == "C") { 
-		def newCoolingSetpoint = parent.convertToUnit(coolingSetpoint, "F") - 1
-		coolingSetpoint = parent.convertToUnit(newCoolingSetpoint, "C")
-	} else { 
-		coolingSetpoint -= 1 
-	}
-	setCoolingSetpoint(coolingSetpoint)  
+	setCoolingSetpoint(parent.getTemperatureNext(coolingSetpoint, -1))  
 }
 
 def switchProgram() {
@@ -419,13 +373,16 @@ def switchProgram() {
 
 def setThermostatProgram(programID) {
 	state.polling.runNow = true
-	parent.setProgram(this.device, "1", programID)
 	updateThermostatData([thermostatProgramMode: "1", thermostatProgramSelection: programID])
+    def thermostatResult = parent.setProgram(this.device, "1", programID)
+	state.polling.runNow = true
+    updateThermostatData(thermostatResult)
 }
 
 def setThermostatData(thermostatData) {
 	state.polling.runNow = true
-	log.debug "ThermostatData: " + thermostatData
-	parent.setThermostat(this.device, thermostatData)
 	updateThermostatData(thermostatData)
+	def thermostatResult = parent.setThermostat(this.device, thermostatData)
+    state.polling.runNow = true
+	updateThermostatData(thermostatResult)
 }
