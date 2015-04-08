@@ -1,8 +1,8 @@
 /**
- *	iComfort Thermostat SmartDevice
- *
- *	Author: Jason Mok
- *	Date: 2015-01-10
+ *  iComfort Service Manager SmartApp
+ * 
+ *  Author: Jason Mok
+ *  Date: 2015-01-10
  *
  ***************************
  *
@@ -18,445 +18,558 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  **************************
- *
- * REQUIREMENTS:
- * Refer to iComfort SmartApp
- *
- **************************
- * 
- * USAGE:
- * Put this in Device Type. Don't install until you have all other device types scripts added
- * Refer to iComfort SmartApp
- *
  */
- metadata {
-	definition (name: "iComfort Thermostat", namespace: "copy-ninja", author: "Jason Mok") {
-		capability "Thermostat"
-		capability "Relative Humidity Measurement"
-		capability "Polling"
-		capability "Refresh"
-		capability "Sensor"
-		capability "Presence Sensor"
-		capability "Temperature Measurement"
-	        
-		attribute "temperatureDisplay", "string"
-		attribute "heatingSetpointDisplay", "string"
-		attribute "coolingSetpointDisplay", "string"
-		attribute "thermostatProgram", "string"
-	        
-		command "heatLevelUp"
-		command "heatLevelDown"
-		command "coolLevelUp"
-		command "coolLevelDown"
-		command "switchMode"
-		command "switchFanMode"
-		command "switchProgram"
-		command "setThermostatProgram"
-		command "away"
-		command "present"
-		command "setPresence"
-	}
+definition(
+	name: "iComfort",
+	namespace: "copy-ninja",
+	author: "Jason Mok",
+	description: "Connect iComfort to control your thermostats",
+	category: "SmartThings Labs",
+	iconUrl:   "http://smartthings.copyninja.net/icons/iComfort@1x.png",
+	iconX2Url: "http://smartthings.copyninja.net/icons/iComfort@2x.png",
+	iconX3Url: "http://smartthings.copyninja.net/icons/iComfort@3x.png"
+)
 
-	simulator { }
+preferences {
+	page(name: "prefLogIn", title: "iComfort")    
+	page(name: "prefListDevice", title: "iComfort")
+}
 
-	tiles {
-		valueTile("temperature", "device.temperature", width: 2, height: 2) {
-			state("temperature", label:'${currentValue}°', 
-				backgroundColors:[
-					[value: "31", unit: "F", color: "#153591"],
-					[value: "44", unit: "F", color: "#1e9cbb"],
-					[value: "59", unit: "F", color: "#90d2a7"],
-					[value: "74", unit: "F", color: "#44b621"],
-					[value: "84", unit: "F", color: "#f1d801"],
-					[value: "95", unit: "F", color: "#d04e00"],
-					[value: "96", unit: "F", color: "#bc2323"],
-					[value: "0.0", unit: "C", color: "#153591"],
-					[value: "6.0", unit: "C", color: "#1e9cbb"],
-					[value: "15.0", unit: "C", color: "#90d2a7"],
-					[value: "23.0", unit: "C", color: "#44b621"],
-					[value: "29.0", unit: "C", color: "#f1d801"],
-					[value: "35.0", unit: "C", color: "#d04e00"],
-					[value: "37.0", unit: "C", color: "#bc2323"]
-				]		
-			)
-		}
-		valueTile("temperatureDisplay", "device.temperatureDisplay", width: 2, height: 2) {
-			state("temperature", label:'${currentValue}', 
-				backgroundColors:[
-					[value: "31°", unit: "F", color: "#153591"],
-					[value: "44°", unit: "F", color: "#1e9cbb"],
-					[value: "59°", unit: "F", color: "#90d2a7"],
-					[value: "74°", unit: "F", color: "#44b621"],
-					[value: "84°", unit: "F", color: "#f1d801"],
-					[value: "95°", unit: "F", color: "#d04e00"],
-					[value: "96°", unit: "F", color: "#bc2323"],
-					[value: "0.0°", unit: "C", color: "#153591"],
-					[value: "6.0°", unit: "C", color: "#1e9cbb"],
-					[value: "15.0°", unit: "C", color: "#90d2a7"],
-					[value: "23.0°", unit: "C", color: "#44b621"],
-					[value: "29.0°", unit: "C", color: "#f1d801"],
-					[value: "35.0°", unit: "C", color: "#d04e00"],
-					[value: "37.0°", unit: "C", color: "#bc2323"]
-				]
-			)
-		}
-		valueTile("humidity", "device.humidity", inactiveLabel: false) {
-			state("humidity", label:'${currentValue}% \nHumidity' , unit: "Humidity",
-				backgroundColors:[
-					[value: 20, unit: "", color: "#b2d3f9"],
-					[value: 30, unit: "", color: "#99c5f8"],
-					[value: 35, unit: "", color: "#7fb6f6"],
-					[value: 40, unit: "", color: "#66a8f4"],
-					[value: 45, unit: "", color: "#4c99f3"],
-					[value: 50, unit: "", color: "#328bf1"],
-					[value: 55, unit: "", color: "#197cef"],
-					[value: 60, unit: "", color: "#006eee"],
-					[value: 70, unit: "", color: "#0063d6"],
-				]
-			)
-		}
-		standardTile("thermostatOperatingState", "device.thermostatOperatingState", canChangeIcon: false, decoration: "flat") {
-			state("idle",            icon: "st.thermostat.ac.air-conditioning", label: "Idle")
-			state("waiting",         icon: "st.thermostat.ac.air-conditioning", label: "Waiting")
-			state("heating",         icon: "st.thermostat.heating")
-			state("cooling",         icon: "st.thermostat.cooling")
-			state("emergency heat",  icon: "st.thermostat.emergency-heat")
-			
-		}
-		standardTile("thermostatMode", "device.thermostatMode", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
-			state("auto",      action:"switchMode",    nextState: "auto",      icon: "st.thermostat.auto")
-			state("heat",      action:"switchMode",    nextState: "heat",      icon: "st.thermostat.heat")
-			state("cool",      action:"switchMode",    nextState: "cool",      icon: "st.thermostat.cool")
-			state("off",       action:"switchMode",    nextState: "off",       icon: "st.thermostat.heating-cooling-off")
-			state("emergency heat",       action:"switchMode",    nextState: "emergency heat",       icon: "st.thermostat.emergency-heat")
-			state("program",   action:"switchMode",    nextState: "program",   icon: "st.thermostat.ac.air-conditioning", label: "Program")
-		}
-		standardTile("thermostatFanMode", "device.thermostatFanMode", canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
-			state("auto",      action:"switchFanMode", nextState: "auto",       icon: "st.thermostat.fan-auto")
-			state("on",        action:"switchFanMode", nextState: "on",         icon: "st.thermostat.fan-on")
-			state("circulate", action:"switchFanMode", nextState: "circulate",  icon: "st.thermostat.fan-circulate")
-			state("off",       action:"switchFanMode", nextState: "off",        icon: "st.thermostat.fan-off")
-		}
-		standardTile("heatLevelUp", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat" ) {
-			state("heatLevelUp",   action:"heatLevelUp",   icon:"st.thermostat.thermostat-up", backgroundColor:"#F7C4BA")
-		}        
-		valueTile("heatingSetpoint", "device.heatingSetpoint", inactiveLabel: false) {
-			state("heat", label:'${currentValue}°',
-            	backgroundColors:[
-					[value: "40", unit: "F", color: "#f49b88"],
-					[value: "50", unit: "F", color: "#f28770"],
-					[value: "60", unit: "F", color: "#f07358"],
-					[value: "70", unit: "F", color: "#ee5f40"],
-					[value: "80", unit: "F", color: "#ec4b28"],
-					[value: "90", unit: "F", color: "#ea3811"],
-					[value: "5.0",  unit: "C", color: "#f49b88"],
-					[value: "10.0", unit: "C", color: "#f28770"],
-					[value: "15.0", unit: "C", color: "#f07358"],
-					[value: "20.0", unit: "C", color: "#ee5f40"],
-					[value: "25.0", unit: "C", color: "#ec4b28"],
-					[value: "30.0", unit: "C", color: "#ea3811"]
-				]
-			)
-		}
-		valueTile("heatingSetpointDisplay", "device.heatingSetpointDisplay", inactiveLabel: false) {
-			state("heat", label:'${currentValue}', 
-				backgroundColors:[
-					[value: "40°", unit: "F", color: "#f49b88"],
-					[value: "50°", unit: "F", color: "#f28770"],
-					[value: "60°", unit: "F", color: "#f07358"],
-					[value: "70°", unit: "F", color: "#ee5f40"],
-					[value: "80°", unit: "F", color: "#ec4b28"],
-					[value: "90°", unit: "F", color: "#ea3811"],
-					[value: "5.0°",  unit: "C", color: "#f49b88"],
-					[value: "10.0°", unit: "C", color: "#f28770"],
-					[value: "15.0°", unit: "C", color: "#f07358"],
-					[value: "20.0°", unit: "C", color: "#ee5f40"],
-					[value: "25.0°", unit: "C", color: "#ec4b28"],
-					[value: "30.0°", unit: "C", color: "#ea3811"]
-				])
-		}
-		standardTile("heatLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
-			state("heatLevelDown", action:"heatLevelDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#F7C4BA")
-		}        
-		standardTile("coolLevelUp", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat" ) {
-			state("coolLevelUp",   action:"coolLevelUp",   icon:"st.thermostat.thermostat-up" , backgroundColor:"#BAEDF7")
-		}
-		valueTile("coolingSetpoint", "device.coolingSetpoint", inactiveLabel: false) {
-			state("cool", label:'${currentValue}°',
-				backgroundColors:[
-					[value: "40", unit: "F", color: "#88e1f4"],
-					[value: "50", unit: "F", color: "#70dbf2"],
-					[value: "60", unit: "F", color: "#58d5f0"],
-					[value: "70", unit: "F", color: "#40cfee"],
-					[value: "80", unit: "F", color: "#28c9ec"],
-					[value: "90", unit: "F", color: "#11c3ea"],
-					[value:  "5.0", unit: "C",  color: "#88e1f4"],
-					[value: "10.0", unit: "C",  color: "#70dbf2"],
-					[value: "15.0", unit: "C",  color: "#58d5f0"],
-					[value: "20.0", unit: "C",  color: "#40cfee"],
-					[value: "25.0", unit: "C",  color: "#28c9ec"],
-					[value: "30.0", unit: "C",  color: "#11c3ea"]
-				]
-			)
-		}
-		valueTile("coolingSetpointDisplay", "device.coolingSetpointDisplay", inactiveLabel: false) {
-			state("cool", label:'${currentValue}', 
-				backgroundColors:[
-					[value: "40°", unit: "F", color: "#88e1f4"],
-					[value: "50°", unit: "F", color: "#70dbf2"],
-					[value: "60°", unit: "F", color: "#58d5f0"],
-					[value: "70°", unit: "F", color: "#40cfee"],
-					[value: "80°", unit: "F", color: "#28c9ec"],
-					[value: "90°", unit: "F", color: "#11c3ea"],
-					[value:  "5.0°", unit: "C",  color: "#88e1f4"],
-					[value: "10.0°", unit: "C",  color: "#70dbf2"],
-					[value: "15.0°", unit: "C",  color: "#58d5f0"],
-					[value: "20.0°", unit: "C",  color: "#40cfee"],
-					[value: "25.0°", unit: "C",  color: "#28c9ec"],
-					[value: "30.0°", unit: "C",  color: "#11c3ea"]
-				])
-		}
-		standardTile("coolLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
-			state("coolLevelDown", action:"coolLevelDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#BAEDF7")
-		}
-		valueTile("thermostatProgram", "device.thermostatProgram", inactiveLabel: false, decoration: "flat") {
-			state("program", action:"switchProgram", label: '${currentValue}')
-		}
-		standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat") {
-			state("default", action:"refresh.refresh",        icon:"st.secondary.refresh")
-		}
-		standardTile("presence", "device.presence", inactiveLabel: false, decoration: "flat") { 
-			state("present", label:"present", action:"away", icon: "st.Home.home2")
-			state("not present", label:"away", action:"present", icon: "st.Transportation.transportation5")
+/* Preferences */
+def prefLogIn() {
+	def showUninstall = username != null && password != null 
+	return dynamicPage(name: "prefLogIn", title: "Connect to iComfort", nextPage:"prefListDevice", uninstall:showUninstall, install: false) {
+		section("Login Credentials"){
+			input("username", "text", title: "Username", description: "iComfort Username (case sensitive)")
+			input("password", "password", title: "Password", description: "iComfort password (case sensitive)")
 		} 
-		main "temperatureDisplay"
-		details(["temperatureDisplay", "humidity", "thermostatOperatingState",  "heatLevelUp", "coolLevelUp", "thermostatFanMode", "heatingSetpointDisplay", "coolingSetpointDisplay", "thermostatMode", "heatLevelDown", "coolLevelDown", "thermostatProgram", "presence", "refresh" ])
+		section("Connectivity"){
+			input(name: "polling", title: "Server Polling (in Minutes)", type: "int", description: "in minutes", defaultValue: "5" )
+		}              
 	}
 }
 
-def installed() { initialize() }
+def prefListDevice() {
+	if (loginCheck()) {
+		def thermostatList = getThermostatList()
+		if (thermostatList) {
+			return dynamicPage(name: "prefListDevice",  title: "Thermostats", install:true, uninstall:true) {
+				section("Select which thermostat/zones to use"){
+					input(name: "thermostat", type: "enum", required:false, multiple:true, metadata:[values:thermostatList])
+				}
+			}
+		} else {
+			return dynamicPage(name: "prefListDevice",  title: "Error!", install:false, uninstall:true) {
+				section(""){
+					paragraph "Could not find any devices " 
+				}
+			}
+		}
+	} else {
+		return dynamicPage(name: "prefListDevice",  title: "Error!", install:false, uninstall:true) {
+			section(""){
+				paragraph "The username or password you entered is incorrect. Try again. " 
+			}
+		}  
+	}
+}
 
+/* Initialization */
+def installed() { initialize() }
 def updated() { initialize() }
 
-def initialize() {
+def uninstalled() {
+	unschedule()
+	def deleteDevices = getAllChildDevices()
+	deleteDevices.each { deleteChildDevice(it.deviceNetworkId) }
+}	
+
+def initialize() {    
+	unsubscribe()
+    
+	// Get initial polling state
 	state.polling = [ 
-		last: 0,
+		last: now(),
 		runNow: true
-	]	
-	refresh() 
+	]
+    
+	// Create new devices for each selected doors
+	def selectedDevices = []
+	def thermostatList = getThermostatList()
+	def deleteDevices 
+   	 
+	if (settings.thermostat) {
+		if (settings.thermostat[0].size() > 1) {
+			selectedDevices = settings.thermostat
+		} else {
+			selectedDevices.add(settings.thermostat)
+		}
+	}
+     
+	selectedDevices.each { dni ->    	
+		def childDevice = getChildDevice(dni)
+		if (!childDevice) {
+            addChildDevice("copy-ninja", "iComfort Thermostat", dni, null, ["name": "iComfort: " + thermostatList[dni]])
+		} 
+	}
+    
+	//Remove devices that are not selected in the settings
+	if (!selectedDevices) {
+		deleteDevices = getAllChildDevices()
+	} else {
+		deleteDevices = getChildDevices().findAll { !selectedDevices.contains(it.deviceNetworkId) }
+	}
+	deleteDevices.each { deleteChildDevice(it.deviceNetworkId) } 
+	
+	
+	//Refresh device
+	refresh()
+    
+	// Schedule polling
+	unschedule()
+	schedule("0 0/" + ((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1)  + " * * * ?", refresh )
 }
 
-def parse(String description) { }
-
-def refresh() { 
-	state.polling.runNow = true
-	parent.refresh() 
+/* Access Management */
+private loginCheck() { 
+	apiPut("/DBAcessService.svc/ValidateUser", [query: [UserName: settings.username, lang_nbr: "1"]] ) { response ->
+		if (response.status == 200) {
+			if (response.data.msg_code == "SUCCESS") {
+				return true
+			} else {
+				return false
+			}
+		} else {
+			return false
+		}
+	} 	
 }
 
-def poll() { updateThermostatData(parent.getDeviceStatus(this.device)) }
+// Listing all the thermostats you have in iComfort
+private getThermostatList() { 	    
+	def thermostatList = [:]
+    def gatewayList = [:]
+    state.data = [:]
+	state.lookup = [
+		thermostatOperatingState: [:],
+		thermostatFanMode: [:],
+		thermostatMode: [:],
+		program: [:],
+		coolingSetPointHigh: [:],
+		coolingSetPointLow: [:],
+		heatingSetPointHigh: [:],
+		heatingSetPointLow: [:],
+		differenceSetPoint: [:],
+        temperatureRangeF: [:]
+	]
+	state.list = [
+		temperatureRangeC: [],
+		program: [:]
+	]
+    
+	//Get Thermostat Mode lookups
+	apiGet("/DBAcessService.svc/GetTstatLookupInfo", [query: [name: "Operation_Mode", langnumber: 0]]) { response ->
+		response.data.tStatlookupInfo.each {
+			state.lookup.thermostatMode.putAt(it.value.toString(), translateDesc(it.description))
+		}
+	}
+	
+	//Get Fan Modes lookups
+	apiGet("/DBAcessService.svc/GetTstatLookupInfo", [query: [name: "Fan_Mode", langnumber: 0]]) { response ->
+		response.data.tStatlookupInfo.each {
+			state.lookup.thermostatFanMode.putAt(it.value.toString(), translateDesc(it.description))
+		}
+	}
+	
+	//Get System Status lookups
+	apiGet("/DBAcessService.svc/GetTstatLookupInfo", [query: [name: "System_Status", langnumber: 0]]) { response ->
+		response.data.tStatlookupInfo.each {
+			state.lookup.thermostatOperatingState.putAt(it.value.toString(), translateDesc(it.description))
+		}
+	}    
 
-def updateThermostatData(thermostatData) {
-	//update the state data
-	def next = (state.polling.last?:0) + 15000  //will not update if it's not more than 15 seconds. this is to stop polling from updating all the state data.
+	//Get Temperature lookups
+	apiGet("/DBAcessService.svc/GetTemperatureRange", [query: [highpoint: 40, lowpoint: 0]]) { response ->
+		response.data.each {
+			def temperatureLookup = it.Value.split("\\|")
+			state.lookup.temperatureRangeF.putAt(temperatureLookup[1].toString(), temperatureLookup[0].toString())
+			state.list.temperatureRangeC.add(temperatureLookup[0].toString())
+		}
+	}    
 
+	//Retrieve all the gateways
+	apiGet("/DBAcessService.svc/GetSystemsInfo", [query: [userID: settings.username]]) { response ->
+		if (response.status == 200) {
+			response.data.Systems.each { device ->
+				gatewayList.putAt(device.Gateway_SN,device.System_Name)
+			}
+		}
+	}   
+	//Retrieve all the Zones
+	gatewayList.each { gatewaySN, gatewayName ->		
+		apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: gatewaySN, TempUnit: (getTemperatureUnit()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
+			if (response.status == 200) {
+            	//log.debug "zones: " response.data.tStatInfo
+				response.data.tStatInfo.each { 
+					def dni = [ app.id, gatewaySN, it.Zone_Number ].join('|')
+                    thermostatList[dni] = ( it.Zones_Installed > 1 )? gatewayName + ": " + it.Zone_Name : gatewayName
+					
+					//Get the state of each device
+					state.data[dni] = [
+						temperature: it.Indoor_Temp,
+						humidity: it.Indoor_Humidity,
+						coolingSetpoint: it.Cool_Set_Point,
+						heatingSetpoint: it.Heat_Set_Point,
+						thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode.toString(), true ),
+						thermostatFanMode: lookupInfo( "thermostatFanMode", it.Fan_Mode.toString(), true ),
+						thermostatOperatingState: lookupInfo( "thermostatOperatingState", it.System_Status.toString(), true ),
+						thermostatProgramMode: it.Program_Schedule_Mode,
+						thermostatProgramSelection: it.Program_Schedule_Selection,
+						awayMode: it.Away_Mode.toString()
+					]
+					
+					//Get Devices Program lookups
+					state.lookup.program.putAt(dni, [:])
+					state.list.program.putAt(dni, [])
+					apiGet("/DBAcessService.svc/GetTStatScheduleInfo", [query: [GatewaySN: gatewaySN]]) { response2 ->
+						if (response2.status == 200) {
+							response2.data.tStatScheduleInfo.each {
+								state.lookup.program[dni].putAt(it.Schedule_Number.toString(), "Program " + (it.Schedule_Number + 1) + ":\n" + it.Schedule_Name)
+								state.list.program[dni].add("Program " + (it.Schedule_Number + 1) + ":\n" + it.Schedule_Name)
+							}      
+						}
+					}
+                    
+					//Get Devices Limit Lookups
+					apiGet("/DBAcessService.svc/GetGatewayInfo", [query: [GatewaySN: gatewaySN, TempUnit: "0"]]) { response2 ->
+						if (response2.status == 200) {
+							state.lookup.coolingSetPointHigh.putAt(dni, response2.data.Cool_Set_Point_High_Limit)
+							state.lookup.coolingSetPointLow.putAt(dni, response2.data.Cool_Set_Point_Low_Limit)
+							state.lookup.heatingSetPointHigh.putAt(dni, response2.data.Heat_Set_Point_High_Limit)
+							state.lookup.heatingSetPointLow.putAt(dni, response2.data.Heat_Set_Point_Low_Limit)
+							state.lookup.differenceSetPoint.putAt(dni, response2.data.Heat_Cool_Dead_Band)
+						}
+					}
+				}
+			}
+		}
+	}
+	return thermostatList
+}
+
+
+
+/* api connection */
+	
+// HTTP GET call
+private apiGet(apiPath, apiParams = [], callback = {}) {	
+	// set up parameters
+	apiParams = [ 
+		uri: "https://" + settings.username + ":" + settings.password + "@services.myicomfort.com",
+		path: apiPath,
+	] + apiParams
+	
+	// try to call 
+	try {
+		//log.debug "HTTP GET request: " + apiParams
+		httpGet(apiParams) { response ->
+			//log.debug "HTTP GET response: " + response.data
+			callback(response)
+		}
+	}	catch (Error e)	{
+		log.debug "API Error: $e"
+	}
+}
+
+// HTTP PUT call
+private apiPut(apiPath, apiParams = [], callback = {}) {    
+	// set up final parameters
+	apiParams = [ 
+		uri: "https://" + settings.username + ":" + settings.password + "@services.myicomfort.com",
+		path: apiPath,
+	] + apiParams
+    
+    
+	try {
+		//log.debug "HTTP PUT request: " + apiParams
+		httpPut(apiParams) { response ->
+			//log.debug "HTTP PUT response: " + response.data
+			callback(response)
+		}
+	} catch (Error e)	{
+		log.debug "API Error: $e"
+	}
+}
+
+// Updates data for devices
+def updateDeviceData() {    
+	// Next polling time, defined in settings
+	def next = (state.polling.last?:0) + ((settings.polling.toInteger() > 0 ? settings.polling.toInteger() : 1) * 60 * 1000)
 	if ((now() > next) || (state.polling.runNow)) {
+		// set polling states
 		state.polling.last = now()
 		state.polling.runNow = false
 		
-		def thermostatProgramSelection
-		def thermostatProgramMode = (device.currentValue("thermostatProgram") == "Manual")?"0":"1"
-		def thermostatMode = (device.currentState("thermostatMode")?.value)?device.currentState("thermostatMode")?.value:"auto"
-		
-		thermostatData.each { name, value -> 
-			if (name == "temperature" || name == "coolingSetpoint" || name == "heatingSetpoint") {
-				def displayValue = value.toString()
-				if (parent.getTemperatureUnit() == "C") {
-					displayValue  = String.format("%.1f", (Math.round(value * 20) / 20)) + "°"
-				} else {
-					displayValue  = String.format("%.0f", value) + "°"
+		// update data for child devices
+		updateDeviceChildData()
+	}
+	return true
+}
+
+// update child device data
+private updateDeviceChildData() {
+	def childDevices = getAllChildDevices()
+	childDevices.each { device ->
+		def childDevicesGateway = getDeviceGatewaySN(device)
+		apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: childDevicesGateway, TempUnit: (getTemperatureUnit()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
+			if (response.status == 200) {
+				response.data.tStatInfo.each { 
+					state.data[device.deviceNetworkId] = [
+						temperature: it.Indoor_Temp,
+						humidity: it.Indoor_Humidity,
+						coolingSetpoint: it.Cool_Set_Point,
+						heatingSetpoint: it.Heat_Set_Point,
+						thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode.toString(), true ),
+						thermostatFanMode: lookupInfo( "thermostatFanMode", it.Fan_Mode.toString(), true ),
+						thermostatOperatingState: lookupInfo( "thermostatOperatingState", it.System_Status.toString(), true ),
+						thermostatProgramMode: it.Program_Schedule_Mode,
+						thermostatProgramSelection: it.Program_Schedule_Selection,
+						awayMode: it.Away_Mode.toString()
+					]
 				}
-				def displayName = name + "Display"
-				sendEvent(name: displayName, value: displayValue as String, unit: parent.getTemperatureUnit(), displayed: false)
-				sendEvent(name: name, value: value , unit: parent.getTemperatureUnit())
-				log.debug "Sending Event: " + [name, value, parent.getTemperatureUnit()]
-			} else if (name == "thermostatProgramMode") {
-				thermostatProgramMode = value
-			} else if (name == "thermostatProgramSelection") {
-				thermostatProgramSelection = value
-			} else if (name == "thermostatMode") {
-				thermostatMode = value
-			} else if (name == "awayMode") {
-				if (value == "1") {
-					sendEvent(name: "presence", value: "not present")
-				} else {
-					sendEvent(name: "presence", value: "present")
-				}
-			} else {
-				sendEvent(name: name, value: value, displayed: false)
-				log.debug "Sending Misc Event: " + [name, value]
 			}
 		}
-        		
-		if (thermostatProgramMode == "0") {
-			sendEvent(name: "thermostatMode", value: thermostatMode)
-			sendEvent(name: "thermostatProgram", value: "Manual")
-			log.debug "Sending Event: " + ["thermostatMode", thermostatMode]
-			log.debug "Sending Event: " + ["thermostatProgram", "Manual"]			
+	}
+}
+
+// lookup value translation
+def lookupInfo( lookupName, lookupValue, lookupMode ) {
+	if (lookupName == "thermostatFanMode") {
+		if (lookupMode) {
+			return state.lookup.thermostatFanMode.getAt(lookupValue.toString())
 		} else {
-			sendEvent(name: "thermostatMode", value: "program") 
-			log.debug "Sending Event: " + ["thermostatMode", "program"]
-			if (thermostatProgramSelection) {
-				sendEvent(name: "thermostatProgram", value: parent.getThermostatProgramName(this.device, thermostatProgramSelection))
-				log.debug "Sending Event: " + ["thermostatProgram", parent.getThermostatProgramName(this.device, thermostatProgramSelection)]
-			}
+			return state.lookup.thermostatFanMode.find{it.value==lookupValue.toString()}?.key
+		}
+	}
+	if (lookupName == "thermostatMode") {
+		if (lookupMode) {
+			return state.lookup.thermostatMode.getAt(lookupValue.toString())
+		} else {
+			return state.lookup.thermostatMode.find{it.value==lookupValue.toString()}?.key
+		}	
+	}
+	if (lookupName == "thermostatOperatingState") {
+		if (lookupMode) {
+			return state.lookup.thermostatOperatingState.getAt(lookupValue.toString())
+		} else {
+			return state.lookup.thermostatOperatingState.find{it.value==lookupValue.toString()}?.key
+		}	
+	}
+}
+
+/* for SmartDevice to call */
+// Refresh data
+def refresh() {
+	state.polling = [ 
+		last: now(),
+		runNow: true
+	]
+	
+	//update device to state data
+	def updated = updateDeviceData()
+	
+	log.debug "state data: " + state.data
+	//log.debug "state lookup: " + state.lookup
+	//log.debug "state list: " + state.list
+    
+	//force devices to poll to get the latest status
+	if (updated) { 
+		// get all the children and send updates
+		def childDevice = getAllChildDevices()
+		childDevice.each { 
+			log.debug "Updating " + it.deviceNetworkId
+			//it.poll()
+			it.updateThermostatData(state.data[it.deviceNetworkId])
 		}
 	}
 }
 
-def setHeatingSetpoint(Number heatingSetpoint) {
-	// define maximum & minimum for heating setpoint 
-	def minHeat = parent.getSetPointLimit(this.device, "heatingSetPointLow")
-	def maxHeat = parent.getSetPointLimit(this.device, "heatingSetPointHigh")
-	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint").toInteger()
-	
-	heatingSetpoint = (heatingSetpoint < minHeat)? minHeat : heatingSetpoint
-	heatingSetpoint = (heatingSetpoint > maxHeat)? maxHeat : heatingSetpoint
+// Get Device Gateway SN
+def getDeviceGatewaySN(childDevice) { return childDevice.deviceNetworkId.split("\\|")[1] }
 
-	// check cooling setpoint 
-	def heatSetpointDiff = parent.getTemperatureNext(heatingSetpoint, diffHeat)
-	def coolingSetpoint = device.currentValue("coolingSetpoint")
-	coolingSetpoint = (heatSetpointDiff > coolingSetpoint)? heatSetpointDiff : coolingSetpoint
+// Get Device Zone
+def getDeviceZone(childDevice) { return childDevice.deviceNetworkId.split("\\|")[2] }
+
+// Get single device status
+def getDeviceStatus(childDevice) { return state.data[childDevice.deviceNetworkId] }
+
+// Send thermostat
+def setThermostat(childDevice, thermostatData = []) {
+	thermostatData.each { key, value -> 
+		if (key=="coolingSetpoint") { state.data[childDevice.deviceNetworkId].coolingSetpoint = value }
+		if (key=="heatingSetpoint") { state.data[childDevice.deviceNetworkId].heatingSetpoint = value }
+		if (key=="thermostatFanMode") { state.data[childDevice.deviceNetworkId].thermostatFanMode = value }
+		if (key=="thermostatMode") { state.data[childDevice.deviceNetworkId].thermostatMode = value }
+	}
+	
+	// set up final parameters
+	def apiBody = [ 
+		Cool_Set_Point: state.data[childDevice.deviceNetworkId].coolingSetpoint,
+		Heat_Set_Point: state.data[childDevice.deviceNetworkId].heatingSetpoint,
+		Fan_Mode: lookupInfo("thermostatFanMode",state.data[childDevice.deviceNetworkId].thermostatFanMode.toString(),false),
+		Operation_Mode: lookupInfo("thermostatMode",state.data[childDevice.deviceNetworkId].thermostatMode.toString(),false),
+		Pref_Temp_Units: (getTemperatureUnit()=="F")?0:1,
+		Zone_Number: getDeviceZone(childDevice),
+		GatewaySN: getDeviceGatewaySN(childDevice) 
+	]
+	
+    apiPut("/DBAcessService.svc/SetTStatInfo", [contentType: "application/x-www-form-urlencoded", requestContentType: "application/json; charset=utf-8", body: apiBody]) 
     
-	setThermostatData([coolingSetpoint: coolingSetpoint, heatingSetpoint: heatingSetpoint])
+    return state.data[childDevice.deviceNetworkId]
 }
 
-def setCoolingSetpoint(Number coolingSetpoint) { 
-	// define maximum & minimum for cooling setpoint 
-	def minCool = parent.getSetPointLimit(this.device, "coolingSetPointLow")
-	def maxCool = parent.getSetPointLimit(this.device, "coolingSetPointHigh")
-	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint").toInteger()
-
-	coolingSetpoint = (coolingSetpoint < minCool)? minCool : coolingSetpoint
-	coolingSetpoint = (coolingSetpoint > maxCool)? maxCool : coolingSetpoint
+// Set program
+def setProgram(childDevice, scheduleMode, scheduleSelection) {
+	def apiBody = []
+    def thermostatData = []
+	//Retrieve program info
+	state.data[childDevice.deviceNetworkId].thermostatProgramMode = scheduleMode
+	if (scheduleMode == "1") {
+		state.data[childDevice.deviceNetworkId].thermostatProgramSelection = scheduleSelection
+		apiGet("/DBAcessService.svc/GetProgramInfo", [query: [GatewaySN: getDeviceGatewaySN(childDevice), ScheduleNum: scheduleSelection, TempUnit: (getTemperatureUnit()=="F")?0:1]]) { response ->
+			if (response.status == 200) {
+				state.data[childDevice.deviceNetworkId].coolingSetpoint = response.data.Cool_Set_Point
+				state.data[childDevice.deviceNetworkId].heatingSetpoint = response.data.Heat_Set_Point
+				state.data[childDevice.deviceNetworkId].thermostatFanMode = lookupInfo("thermostatFanMode",response.data.Fan_Mode.toString(),true)
+			}
+		}
+	}
+		
+	// set up final parameters for program
+	apiBody = [ 
+		Cool_Set_Point: state.data[childDevice.deviceNetworkId].coolingSetpoint,
+		Heat_Set_Point: state.data[childDevice.deviceNetworkId].heatingSetpoint,
+		Fan_Mode: lookupInfo("thermostatFanMode",state.data[childDevice.deviceNetworkId].thermostatFanMode.toString(),false),
+		Operation_Mode: lookupInfo("thermostatMode",state.data[childDevice.deviceNetworkId].thermostatMode.toString(),false),
+		Pref_Temp_Units: (getTemperatureUnit()=="F")?0:1,
+		Program_Schedule_Mode: scheduleMode,
+		Program_Schedule_Selection: scheduleSelection,
+		Zone_Number: getDeviceZone(childDevice),
+		GatewaySN: getDeviceGatewaySN(childDevice) 
+	]
 	
-	// check heating setpoint 
-	def coolSetpointDiff = parent.getTemperatureNext(coolingSetpoint, (diffHeat * -1))
-    log.debug "coolSetpointDiff : " + coolSetpointDiff
-	def heatingSetpoint = device.currentValue("heatingSetpoint")
-	heatingSetpoint = (coolSetpointDiff < heatingSetpoint)? coolSetpointDiff : heatingSetpoint
-	    
-	setThermostatData([coolingSetpoint: coolingSetpoint, heatingSetpoint: heatingSetpoint])
-}
-
-def switchMode() {
-	def currentMode = device.currentState("thermostatMode")?.value
-	//log.debug "currentMode: " + currentMode
-	switch (currentMode) {
-		case "off":
-			setThermostatMode("heat")
-			break
-		case "heat":
-			setThermostatMode("cool")
-			break
-		case "cool":
-			setThermostatMode("auto")
-			break
-		case "auto":
-			setThermostatMode("off")
-			break
-		case "program":
-			setThermostatMode("auto")
-			break
-		default:
-			setThermostatMode("auto")
+	//Set Thermostat Program
+	apiPut("/DBAcessService.svc/SetProgramInfoNew", [contentType: "application/x-www-form-urlencoded", requestContentType: "application/json; charset=utf-8", body: apiBody]) { response ->
+		if (response.status == 200) {
+			response.data.tStatInfo.each { 
+				state.data[device.deviceNetworkId] = [
+					temperature: it.Indoor_Temp,
+					humidity: it.Indoor_Humidity,
+					coolingSetpoint: it.Cool_Set_Point,
+					heatingSetpoint: it.Heat_Set_Point,
+					thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode.toString(), true ),
+					thermostatFanMode: lookupInfo( "thermostatFanMode", it.Fan_Mode.toString(), true ),
+					thermostatOperatingState: lookupInfo( "thermostatOperatingState", it.System_Status.toString(), true ),
+					thermostatProgramMode: it.Program_Schedule_Mode,
+					thermostatProgramSelection: it.Program_Schedule_Selection,
+					awayMode: it.Away_Mode.toString()
+				]
+				thermostatData = [
+					coolingSetpoint: it.Cool_Set_Point,
+					heatingSetpoint: it.Heat_Set_Point,
+					thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode.toString(), true ),
+					thermostatFanMode: lookupInfo( "thermostatFanMode", it.Fan_Mode.toString(), true ),
+				]
+			}
+		}
 	}
-	if(!currentMode) { setThermostatMode("auto") }
+	   
+	//Set Thermostat Values
+	return setThermostat(childDevice, thermostatData)
 }
 
-def off() { setThermostatMode("off") }
-def heat() { setThermostatMode("heat") }
-def emergencyHeat() { setThermostatMode("emergency heat") }
-def cool() { setThermostatMode("cool") }
-def auto() { setThermostatMode("auto") }
 
-def switchFanMode() {
-	def currentFanMode = device.currentState("thermostatFanMode")?.value
-	switch (currentFanMode) {
-		case "auto":
-			setThermostatFanMode("on")
-			break
-		case "on":
-			setThermostatFanMode("circulate")
-			break
-		case "circulate":
-			setThermostatFanMode("auto")
-			break
-		default:
-			setThermostatFanMode("auto")
+def translateDesc(value) {
+	switch (value) {
+		case "cool only"     : return "cool"
+		case "heat only"     : return "heat"
+		case "heat or cool"  : return "auto"
+		default: return value
 	}
-	if(!currentFanMode) { setThermostatFanMode("auto") }
 }
 
-def setThermostatMode(mode) { 
-	def thermostatProgramMode = (device.currentValue("thermostatProgram") == "Manual")?"0":"1"
-	if (thermostatProgramMode != "0") {
-		parent.setProgram(this.device, "0", state.thermostatProgramSelection)
-		setThermostatData([ thermostatProgramMode: "0", thermostatMode: mode ])
+def getTemperatureUnit() {
+	return (location.temperatureScale)?location.temperatureScale:"F"
+}
+
+def getThermostatProgramName(childDevice, thermostatProgramSelection) {
+	def thermostatProgramSelectionName = state?.lookup?.program[childDevice.deviceNetworkId]?.getAt(thermostatProgramSelection.toString())
+	return thermostatProgramSelectionName?thermostatProgramSelectionName:"Unknown"
+}
+
+def getThermostatProgramNext(childDevice, value) {
+	def sizeProgramIndex = state.list.program[childDevice.deviceNetworkId].size() - 1
+	def currentProgramIndex = (state?.list?.program[childDevice.deviceNetworkId]?.findIndexOf { it == value })?state?.list?.program[childDevice.deviceNetworkId]?.findIndexOf { it == value } : 0
+	def nextProgramIndex = ((currentProgramIndex + 1) <= sizeProgramIndex)? (currentProgramIndex + 1) : 0
+	def nextProgramName = state?.list?.program[childDevice.deviceNetworkId]?.getAt(nextProgramIndex)
+	return state?.lookup?.program[childDevice.deviceNetworkId]?.find{it.value==nextProgramName}?.key
+}
+
+def getTemperatureNext(value, diffIndex) {
+	if (getTemperatureUnit()=="F") {
+		return (value + diffIndex)
 	} else {
-		setThermostatData([ thermostatMode: mode ])
+		def currentTemperatureIndex = state?.list?.temperatureRangeC?.findIndexOf { it == value.toString() }.toInteger()
+		def nextTemperature = new BigDecimal(state?.list?.temperatureRangeC[currentTemperatureIndex + diffIndex])
+		return nextTemperature
 	}
 }
 
-def fanOn() { setThermostatFanMode("on") }
-def fanAuto() { setThermostatFanMode("auto") }
-def fanCirculate() { setThermostatFanMode("circulate") }
-def setThermostatFanMode(fanMode) {	setThermostatData([ thermostatFanMode: fanMode ]) }
-def heatLevelUp() {	
-	def heatingSetpoint = device.currentValue("heatingSetpoint")
-	setHeatingSetpoint(parent.getTemperatureNext(heatingSetpoint, 1))   
-}
-def heatLevelDown() { 
-	def heatingSetpoint = device.currentValue("heatingSetpoint")
-	setHeatingSetpoint(parent.getTemperatureNext(heatingSetpoint, -1))  
-}
-def coolLevelUp() { 
-	def coolingSetpoint = device.currentValue("coolingSetpoint")
-	setCoolingSetpoint(parent.getTemperatureNext(coolingSetpoint, 1))  
-}
-def coolLevelDown() { 
-	def coolingSetpoint = device.currentValue("coolingSetpoint")
-	setCoolingSetpoint(parent.getTemperatureNext(coolingSetpoint, -1))  
+def getSetPointLimit( childDevice, limitType ) { 
+	if (getTemperatureUnit() == "F") {
+		return  state?.lookup?.getAt(limitType)?.getAt(childDevice.deviceNetworkId) 
+	} else {
+		if (limitType == "differenceSetPoint") {
+			return  state?.lookup?.getAt(limitType)?.getAt(childDevice.deviceNetworkId)
+		} else {
+			def limitTemperatureF = state?.lookup?.getAt(limitType)?.getAt(childDevice.deviceNetworkId)
+			def limitTemperatureC = new BigDecimal(state?.lookup?.temperatureRangeF?.getAt(limitTemperatureF.toInteger().toString()))
+			return limitTemperatureC
+		}
+	}
 }
 
-def switchProgram() {
-	def currentProgram = device.currentValue("thermostatProgram")
-	def nextProgramID = parent.getThermostatProgramNext(this.device, currentProgram)
-	setThermostatProgram(nextProgramID)
-}
-
-def setThermostatProgram(programID) {
-	state.polling.runNow = true
-	updateThermostatData([thermostatProgramMode: "1", thermostatProgramSelection: programID])
-    def thermostatResult = parent.setProgram(this.device, "1", programID)
-	state.polling.runNow = true
-    updateThermostatData(thermostatResult)
-}
-
-def setThermostatData(thermostatData) {
-	state.polling.runNow = true
-	updateThermostatData(thermostatData)
-	def thermostatResult = parent.setThermostat(this.device, thermostatData)
-    state.polling.runNow = true
-	updateThermostatData(thermostatResult)
-}
-
-def away() { setPresence("away") } 
-def present() { setPresence("present") } 
-def setPresence(awayStatus) {
+// Set Away Mode
+def setAway(childDevice, awayStatus) {    
 	def awayMode = (awayStatus=="away")?"1":"0"
-	state.polling.runNow = true
-	updateThermostatData([awayMode: awayMode.toString()])
-	def thermostatResult = parent.setAway(this.device, awayStatus)
-	state.polling.runNow = true
-	updateThermostatData(thermostatResult)   
+	//Retrieve program info
+	state.data[childDevice.deviceNetworkId].awayMode = awayMode.toString()
+	
+	def apiQuery = [ 
+		awayMode: awayMode.toString(),
+		ZoneNumber: getDeviceZone(childDevice),
+		TempScale: (getTemperatureUnit()=="F")?0:1,
+		GatewaySN: getDeviceGatewaySN(childDevice) 
+	]
+	
+	//Set Thermostat Program
+	apiPut("/DBAcessService.svc/SetAwayModeNew", [contentType: "application/json; charset=utf-8", requestContentType: "application/json; charset=utf-8", query: apiQuery]) { response ->
+		if (response.status == 200) {
+			response.data.tStatInfo.each { 
+				state.data[childDevice.deviceNetworkId] = [
+					temperature: it.Indoor_Temp,
+					humidity: it.Indoor_Humidity,
+					coolingSetpoint: it.Cool_Set_Point,
+					heatingSetpoint: it.Heat_Set_Point,
+					thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode.toString(), true ),
+					thermostatFanMode: lookupInfo( "thermostatFanMode", it.Fan_Mode.toString(), true ),
+					thermostatOperatingState: lookupInfo( "thermostatOperatingState", it.System_Status.toString(), true ),
+					thermostatProgramMode: it.Program_Schedule_Mode,
+					thermostatProgramSelection: it.Program_Schedule_Selection,
+					awayMode: it.Away_Mode.toString()
+				]
+			}
+		}
+	}
+	return state.data[childDevice.deviceNetworkId]
 }
