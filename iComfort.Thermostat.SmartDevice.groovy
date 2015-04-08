@@ -285,6 +285,12 @@ def updateThermostatData(thermostatData) {
 				thermostatProgramSelection = value
 			} else if (name == "thermostatMode") {
 				thermostatMode = value
+			} else if (name == "awayMode") {
+				if (value == "1") {
+					sendEvent(name: "presence", value: "not present")
+				} else {
+					sendEvent(name: "presence", value: "present")
+				}
 			} else {
 				sendEvent(name: name, value: value, displayed: false)
 				log.debug "Sending Misc Event: " + [name, value]
