@@ -20,10 +20,10 @@
  **************************
  */
 definition(
-	name: "iComfort",
+	name: "iComfort (Connect)",
 	namespace: "copy-ninja",
 	author: "Jason Mok",
-	description: "Connect iComfort to control your thermostats",
+	description: "Connect Lennox iComfort to control your thermostats",
 	category: "SmartThings Labs",
 	iconUrl:   "http://smartthings.copyninja.net/icons/iComfort@1x.png",
 	iconX2Url: "http://smartthings.copyninja.net/icons/iComfort@2x.png",
@@ -31,8 +31,8 @@ definition(
 )
 
 preferences {
-	page(name: "prefLogIn", title: "iComfort")    
-	page(name: "prefListDevice", title: "iComfort")
+	page(name: "prefLogIn", title: "Lennox iComfort")    
+	page(name: "prefListDevice", title: "Lennox iComfort")
 }
 
 /* Preferences */
@@ -43,9 +43,11 @@ def prefLogIn() {
 			input("username", "text", title: "Username", description: "iComfort Username (case sensitive)")
 			input("password", "password", title: "Password", description: "iComfort password (case sensitive)")
 		} 
-		section("Connectivity"){
+		section("Advanced Options"){
 			input(name: "polling", title: "Server Polling (in Minutes)", type: "int", description: "in minutes", defaultValue: "5" )
-		}              
+			paragraph "This option enables author to troubleshoot if you have problem adding devices. It allows the app to send information exchanged with MyQ server to the author. DO NOT ENABLE unless you have contacted author at jason@copyninja.net"
+			input(name:"troubleshoot", title: "Troubleshoot", type: "boolean")
+		}            
 	}
 }
 
@@ -60,38 +62,31 @@ def prefListDevice() {
 			}
 		} else {
 			return dynamicPage(name: "prefListDevice",  title: "Error!", install:false, uninstall:true) {
-				section(""){
-					paragraph "Could not find any devices " 
-				}
+				section(""){ paragraph "Could not find any devices "  }
 			}
 		}
 	} else {
 		return dynamicPage(name: "prefListDevice",  title: "Error!", install:false, uninstall:true) {
-			section(""){
-				paragraph "The username or password you entered is incorrect. Try again. " 
-			}
+			section(""){ paragraph "The username or password you entered is incorrect. Try again. " }
 		}  
 	}
 }
 
 /* Initialization */
 def installed() { initialize() }
-def updated() { initialize() }
+def updated() { 
+	unsubscribe()
+	initialize() 
+}
 
 def uninstalled() {
 	unschedule()
-	def deleteDevices = getAllChildDevices()
-	deleteDevices.each { deleteChildDevice(it.deviceNetworkId) }
+	getAllChildDevices().each { deleteChildDevice(it.deviceNetworkId) }
 }	
 
 def initialize() {    
-	unsubscribe()
-    
 	// Get initial polling state
-	state.polling = [ 
-		last: now(),
-		runNow: true
-	]
+	state.polling = [ last: 0 ]
     
 	// Create new devices for each selected doors
 	def selectedDevices = []
@@ -109,7 +104,7 @@ def initialize() {
 	selectedDevices.each { dni ->    	
 		def childDevice = getChildDevice(dni)
 		if (!childDevice) {
-            addChildDevice("copy-ninja", "iComfort Thermostat", dni, null, ["name": "iComfort: " + thermostatList[dni]])
+			addChildDevice("copy-ninja", "iComfort Thermostat", dni, null, ["name": "iComfort: " + thermostatList[dni]])
 		} 
 	}
     
@@ -121,24 +116,23 @@ def initialize() {
 	}
 	deleteDevices.each { deleteChildDevice(it.deviceNetworkId) } 
 	
+	//Subscribes to sunrise and sunset event to trigger refreshes
+	subscribe(location, "sunrise", runRefresh)
+	subscribe(location, "sunset", runRefresh)
+	subscribe(location, "mode", runRefresh)
+	subscribe(location, "sunriseTime", runRefresh)
+	subscribe(location, "sunsetTime", runRefresh)
 	
 	//Refresh device
-	refresh()
-    
-	// Schedule polling
-	unschedule()
-	schedule("0 0/" + ((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1)  + " * * * ?", refresh )
+	runEvery30Minutes(runRefresh)
+	runRefresh("")
 }
 
 /* Access Management */
 private loginCheck() { 
 	apiPut("/DBAcessService.svc/ValidateUser", [query: [UserName: settings.username, lang_nbr: "1"]] ) { response ->
 		if (response.status == 200) {
-			if (response.data.msg_code == "SUCCESS") {
-				return true
-			} else {
-				return false
-			}
+			return (response.data.msg_code == "SUCCESS") ? true : false
 		} else {
 			return false
 		}
@@ -148,8 +142,8 @@ private loginCheck() {
 // Listing all the thermostats you have in iComfort
 private getThermostatList() { 	    
 	def thermostatList = [:]
-    def gatewayList = [:]
-    state.data = [:]
+	def gatewayList = [:]
+	state.data = [:]
 	state.lookup = [
 		thermostatOperatingState: [:],
 		thermostatFanMode: [:],
@@ -160,7 +154,7 @@ private getThermostatList() {
 		heatingSetPointHigh: [:],
 		heatingSetPointLow: [:],
 		differenceSetPoint: [:],
-        temperatureRangeF: [:]
+		temperatureRangeF: [:]
 	]
 	state.list = [
 		temperatureRangeC: [],
@@ -209,10 +203,9 @@ private getThermostatList() {
 	gatewayList.each { gatewaySN, gatewayName ->		
 		apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: gatewaySN, TempUnit: (getTemperatureUnit()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
 			if (response.status == 200) {
-            	//log.debug "zones: " response.data.tStatInfo
 				response.data.tStatInfo.each { 
 					def dni = [ app.id, gatewaySN, it.Zone_Number ].join('|')
-                    thermostatList[dni] = ( it.Zones_Installed > 1 )? gatewayName + ": " + it.Zone_Name : gatewayName
+					thermostatList[dni] = ( it.Zones_Installed > 1 )? gatewayName + ": " + it.Zone_Name : gatewayName
 					
 					//Get the state of each device
 					state.data[dni] = [
@@ -257,26 +250,16 @@ private getThermostatList() {
 	return thermostatList
 }
 
-
-
 /* api connection */
-	
+
 // HTTP GET call
 private apiGet(apiPath, apiParams = [], callback = {}) {	
 	// set up parameters
-	apiParams = [ 
-		uri: "https://" + settings.username + ":" + settings.password + "@services.myicomfort.com",
-		path: apiPath,
-	] + apiParams
+	apiParams = [ uri: getApiURL(), path: apiPath, headers: [Authorization : getApiAuth()] ] + apiParams
 	
-	// try to call 
 	try {
-		//log.debug "HTTP GET request: " + apiParams
-		httpGet(apiParams) { response ->
-			//log.debug "HTTP GET response: " + response.data
-			callback(response)
-		}
-	}	catch (Error e)	{
+		httpGet(apiParams) { response -> callback(response) }
+	} catch (Error e)	{
 		log.debug "API Error: $e"
 	}
 }
@@ -284,62 +267,36 @@ private apiGet(apiPath, apiParams = [], callback = {}) {
 // HTTP PUT call
 private apiPut(apiPath, apiParams = [], callback = {}) {    
 	// set up final parameters
-	apiParams = [ 
-		uri: "https://" + settings.username + ":" + settings.password + "@services.myicomfort.com",
-		path: apiPath,
-	] + apiParams
-    
+	apiParams = [ uri: getApiURL(), path: apiPath, headers: [Authorization : getApiAuth()] ] + apiParams
     
 	try {
-		//log.debug "HTTP PUT request: " + apiParams
-		httpPut(apiParams) { response ->
-			//log.debug "HTTP PUT response: " + response.data
-			callback(response)
-		}
-	} catch (Error e)	{
+		httpPut(apiParams) { response -> callback(response) }
+	} catch (Error e) {
 		log.debug "API Error: $e"
 	}
 }
 
-// Updates data for devices
-def updateDeviceData() {    
-	// Next polling time, defined in settings
-	def next = (state.polling.last?:0) + ((settings.polling.toInteger() > 0 ? settings.polling.toInteger() : 1) * 60 * 1000)
-	if ((now() > next) || (state.polling.runNow)) {
-		// set polling states
-		state.polling.last = now()
-		state.polling.runNow = false
-		
-		// update data for child devices
-		updateDeviceChildData()
-	}
-	return true
-}
-
 // update child device data
-private updateDeviceChildData() {
-	def childDevices = getAllChildDevices()
-	childDevices.each { device ->
-		def childDevicesGateway = getDeviceGatewaySN(device)
-		apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: childDevicesGateway, TempUnit: (getTemperatureUnit()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
-			if (response.status == 200) {
-				response.data.tStatInfo.each { 
-					state.data[device.deviceNetworkId] = [
-						temperature: it.Indoor_Temp,
-						humidity: it.Indoor_Humidity,
-						coolingSetpoint: it.Cool_Set_Point,
-						heatingSetpoint: it.Heat_Set_Point,
-						thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode.toString(), true ),
-						thermostatFanMode: lookupInfo( "thermostatFanMode", it.Fan_Mode.toString(), true ),
-						thermostatOperatingState: lookupInfo( "thermostatOperatingState", it.System_Status.toString(), true ),
-						thermostatProgramMode: it.Program_Schedule_Mode,
-						thermostatProgramSelection: it.Program_Schedule_Selection,
-						awayMode: it.Away_Mode.toString()
-					]
-				}
+private updateDeviceChildData(device) {
+	apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: getDeviceGatewaySN(device), TempUnit: (getTemperatureUnit()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
+		if (response.status == 200) {
+			response.data.tStatInfo.each { 
+				state.data[device.deviceNetworkId] = [
+					temperature: it.Indoor_Temp,
+					humidity: it.Indoor_Humidity,
+					coolingSetpoint: it.Cool_Set_Point,
+					heatingSetpoint: it.Heat_Set_Point,
+					thermostatMode: lookupInfo( "thermostatMode", it.Operation_Mode.toString(), true ),
+					thermostatFanMode: lookupInfo( "thermostatFanMode", it.Fan_Mode.toString(), true ),
+					thermostatOperatingState: lookupInfo( "thermostatOperatingState", it.System_Status.toString(), true ),
+					thermostatProgramMode: it.Program_Schedule_Mode,
+					thermostatProgramSelection: it.Program_Schedule_Selection,
+					awayMode: it.Away_Mode.toString()
+				]
 			}
 		}
 	}
+	return true
 }
 
 // lookup value translation
@@ -370,26 +327,14 @@ def lookupInfo( lookupName, lookupValue, lookupMode ) {
 /* for SmartDevice to call */
 // Refresh data
 def refresh() {
-	state.polling = [ 
-		last: now(),
-		runNow: true
-	]
-	
-	//update device to state data
-	def updated = updateDeviceData()
-	
-	log.debug "state data: " + state.data
-	//log.debug "state lookup: " + state.lookup
-	//log.debug "state list: " + state.list
-    
-	//force devices to poll to get the latest status
-	if (updated) { 
-		// get all the children and send updates
-		def childDevice = getAllChildDevices()
-		childDevice.each { 
-			log.debug "Updating " + it.deviceNetworkId
-			//it.poll()
-			it.updateThermostatData(state.data[it.deviceNetworkId])
+    	log.info "Refreshing data..."
+	// set polling states
+	state.polling = [ last: now() ]
+		
+	// update data for child devices
+	getAllChildDevices().each { device ->
+		if (updateDeviceChildData(device)) {
+			device.updateThermostatData(state.data[device.deviceNetworkId])
 		}
 	}
 }
@@ -431,7 +376,8 @@ def setThermostat(childDevice, thermostatData = []) {
 // Set program
 def setProgram(childDevice, scheduleMode, scheduleSelection) {
 	def apiBody = []
-    def thermostatData = []
+	def thermostatData = []
+	
 	//Retrieve program info
 	state.data[childDevice.deviceNetworkId].thermostatProgramMode = scheduleMode
 	if (scheduleMode == "1") {
@@ -499,7 +445,7 @@ def translateDesc(value) {
 }
 
 def getTemperatureUnit() {
-	return (location.temperatureScale)?location.temperatureScale:"F"
+	return (location.temperatureScale) ? location.temperatureScale : "F"
 }
 
 def getThermostatProgramName(childDevice, thermostatProgramSelection) {
@@ -572,4 +518,31 @@ def setAway(childDevice, awayStatus) {
 		}
 	}
 	return state.data[childDevice.deviceNetworkId]
+}
+
+//API URL
+def getApiURL() { 
+	if (settings.troubleshoot) {
+		return "https://services.myicomfort.com"
+	} else {
+		return "https://services-myicomfort-com-xjor6gavxo3b.runscope.net"
+	}
+}
+
+//API Authorization header
+def getApiAuth() {
+	def basicAuth = settings.username + ":" + settings.password
+	return "Basic " + basicAuth.encodeAsBase64()
+}
+
+def runRefresh(event) {
+	log.info "Last refresh was "  + ((now() - state.polling.last)/60000) + " minutes ago"
+	// Reschedule if  didn't update for more than 5 minutes plus specified polling
+	if ((((state.polling.last?:0) + (((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1) * 60000) + 300000) < now()) && canSchedule()) {
+		log.info "Scheduling Auto Refresh.."
+		schedule("* */" + ((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1) + " * * * ?", refresh)
+	}
+    
+	// Force Refresh NOWWW!!!!
+	refresh()
 }
