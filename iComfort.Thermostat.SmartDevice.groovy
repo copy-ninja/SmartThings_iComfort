@@ -36,12 +36,9 @@
 		capability "Polling"
 		capability "Refresh"
 		capability "Sensor"
-		capability "Presence Sensor"
 		capability "Temperature Measurement"
+		capability "Actuator"
 	        
-		attribute "temperatureDisplay", "string"
-		attribute "heatingSetpointDisplay", "string"
-		attribute "coolingSetpointDisplay", "string"
 		attribute "thermostatProgram", "string"
 	        
 		command "heatLevelUp"
@@ -63,55 +60,28 @@
 		valueTile("temperature", "device.temperature", width: 2, height: 2) {
 			state("temperature", label:'${currentValue}°', 
 				backgroundColors:[
-					[value: "31", unit: "F", color: "#153591"],
-					[value: "44", unit: "F", color: "#1e9cbb"],
-					[value: "59", unit: "F", color: "#90d2a7"],
-					[value: "74", unit: "F", color: "#44b621"],
-					[value: "84", unit: "F", color: "#f1d801"],
-					[value: "95", unit: "F", color: "#d04e00"],
-					[value: "96", unit: "F", color: "#bc2323"],
-					[value: "0.0", unit: "C", color: "#153591"],
-					[value: "6.0", unit: "C", color: "#1e9cbb"],
-					[value: "15.0", unit: "C", color: "#90d2a7"],
-					[value: "23.0", unit: "C", color: "#44b621"],
-					[value: "29.0", unit: "C", color: "#f1d801"],
-					[value: "35.0", unit: "C", color: "#d04e00"],
-					[value: "37.0", unit: "C", color: "#bc2323"]
+					[value: 31, color: "#153591"],
+					[value: 44, color: "#1e9cbb"],
+					[value: 59, color: "#90d2a7"],
+					[value: 74, color: "#44b621"],
+					[value: 84, color: "#f1d801"],
+					[value: 95, color: "#d04e00"],
+					[value: 96, color: "#bc2323"]
 				]		
-			)
-		}
-		valueTile("temperatureDisplay", "device.temperatureDisplay", width: 2, height: 2) {
-			state("temperature", label:'${currentValue}', 
-				backgroundColors:[
-					[value: "31°", unit: "F", color: "#153591"],
-					[value: "44°", unit: "F", color: "#1e9cbb"],
-					[value: "59°", unit: "F", color: "#90d2a7"],
-					[value: "74°", unit: "F", color: "#44b621"],
-					[value: "84°", unit: "F", color: "#f1d801"],
-					[value: "95°", unit: "F", color: "#d04e00"],
-					[value: "96°", unit: "F", color: "#bc2323"],
-					[value: "0.0°", unit: "C", color: "#153591"],
-					[value: "6.0°", unit: "C", color: "#1e9cbb"],
-					[value: "15.0°", unit: "C", color: "#90d2a7"],
-					[value: "23.0°", unit: "C", color: "#44b621"],
-					[value: "29.0°", unit: "C", color: "#f1d801"],
-					[value: "35.0°", unit: "C", color: "#d04e00"],
-					[value: "37.0°", unit: "C", color: "#bc2323"]
-				]
 			)
 		}
 		valueTile("humidity", "device.humidity", inactiveLabel: false) {
 			state("humidity", label:'${currentValue}% \nHumidity' , unit: "Humidity",
 				backgroundColors:[
-					[value: 20, unit: "", color: "#b2d3f9"],
-					[value: 30, unit: "", color: "#99c5f8"],
-					[value: 35, unit: "", color: "#7fb6f6"],
-					[value: 40, unit: "", color: "#66a8f4"],
-					[value: 45, unit: "", color: "#4c99f3"],
-					[value: 50, unit: "", color: "#328bf1"],
-					[value: 55, unit: "", color: "#197cef"],
-					[value: 60, unit: "", color: "#006eee"],
-					[value: 70, unit: "", color: "#0063d6"],
+					[value: 20, color: "#b2d3f9"],
+					[value: 30, color: "#99c5f8"],
+					[value: 35, color: "#7fb6f6"],
+					[value: 40, color: "#66a8f4"],
+					[value: 45, color: "#4c99f3"],
+					[value: 50, color: "#328bf1"],
+					[value: 55, color: "#197cef"],
+					[value: 60, color: "#006eee"],
+					[value: 70, color: "#0063d6"],
 				]
 			)
 		}
@@ -142,38 +112,15 @@
 		}        
 		valueTile("heatingSetpoint", "device.heatingSetpoint", inactiveLabel: false) {
 			state("heat", label:'${currentValue}°',
-            	backgroundColors:[
-					[value: "40", unit: "F", color: "#f49b88"],
-					[value: "50", unit: "F", color: "#f28770"],
-					[value: "60", unit: "F", color: "#f07358"],
-					[value: "70", unit: "F", color: "#ee5f40"],
-					[value: "80", unit: "F", color: "#ec4b28"],
-					[value: "90", unit: "F", color: "#ea3811"],
-					[value: "5.0",  unit: "C", color: "#f49b88"],
-					[value: "10.0", unit: "C", color: "#f28770"],
-					[value: "15.0", unit: "C", color: "#f07358"],
-					[value: "20.0", unit: "C", color: "#ee5f40"],
-					[value: "25.0", unit: "C", color: "#ec4b28"],
-					[value: "30.0", unit: "C", color: "#ea3811"]
+				backgroundColors:[
+					[value: 40, color: "#f49b88"],
+					[value: 50, color: "#f28770"],
+					[value: 60, color: "#f07358"],
+					[value: 70, color: "#ee5f40"],
+					[value: 80, color: "#ec4b28"],
+					[value: 90, color: "#ea3811"]
 				]
 			)
-		}
-		valueTile("heatingSetpointDisplay", "device.heatingSetpointDisplay", inactiveLabel: false) {
-			state("heat", label:'${currentValue}', 
-				backgroundColors:[
-					[value: "40°", unit: "F", color: "#f49b88"],
-					[value: "50°", unit: "F", color: "#f28770"],
-					[value: "60°", unit: "F", color: "#f07358"],
-					[value: "70°", unit: "F", color: "#ee5f40"],
-					[value: "80°", unit: "F", color: "#ec4b28"],
-					[value: "90°", unit: "F", color: "#ea3811"],
-					[value: "5.0°",  unit: "C", color: "#f49b88"],
-					[value: "10.0°", unit: "C", color: "#f28770"],
-					[value: "15.0°", unit: "C", color: "#f07358"],
-					[value: "20.0°", unit: "C", color: "#ee5f40"],
-					[value: "25.0°", unit: "C", color: "#ec4b28"],
-					[value: "30.0°", unit: "C", color: "#ea3811"]
-				])
 		}
 		standardTile("heatLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
 			state("heatLevelDown", action:"heatLevelDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#F7C4BA")
@@ -184,37 +131,14 @@
 		valueTile("coolingSetpoint", "device.coolingSetpoint", inactiveLabel: false) {
 			state("cool", label:'${currentValue}°',
 				backgroundColors:[
-					[value: "40", unit: "F", color: "#88e1f4"],
-					[value: "50", unit: "F", color: "#70dbf2"],
-					[value: "60", unit: "F", color: "#58d5f0"],
-					[value: "70", unit: "F", color: "#40cfee"],
-					[value: "80", unit: "F", color: "#28c9ec"],
-					[value: "90", unit: "F", color: "#11c3ea"],
-					[value:  "5.0", unit: "C",  color: "#88e1f4"],
-					[value: "10.0", unit: "C",  color: "#70dbf2"],
-					[value: "15.0", unit: "C",  color: "#58d5f0"],
-					[value: "20.0", unit: "C",  color: "#40cfee"],
-					[value: "25.0", unit: "C",  color: "#28c9ec"],
-					[value: "30.0", unit: "C",  color: "#11c3ea"]
+					[value: 40, color: "#88e1f4"],
+					[value: 50, color: "#70dbf2"],
+					[value: 60, color: "#58d5f0"],
+					[value: 70, color: "#40cfee"],
+					[value: 80, color: "#28c9ec"],
+					[value: 90, color: "#11c3ea"]
 				]
 			)
-		}
-		valueTile("coolingSetpointDisplay", "device.coolingSetpointDisplay", inactiveLabel: false) {
-			state("cool", label:'${currentValue}', 
-				backgroundColors:[
-					[value: "40°", unit: "F", color: "#88e1f4"],
-					[value: "50°", unit: "F", color: "#70dbf2"],
-					[value: "60°", unit: "F", color: "#58d5f0"],
-					[value: "70°", unit: "F", color: "#40cfee"],
-					[value: "80°", unit: "F", color: "#28c9ec"],
-					[value: "90°", unit: "F", color: "#11c3ea"],
-					[value:  "5.0°", unit: "C",  color: "#88e1f4"],
-					[value: "10.0°", unit: "C",  color: "#70dbf2"],
-					[value: "15.0°", unit: "C",  color: "#58d5f0"],
-					[value: "20.0°", unit: "C",  color: "#40cfee"],
-					[value: "25.0°", unit: "C",  color: "#28c9ec"],
-					[value: "30.0°", unit: "C",  color: "#11c3ea"]
-				])
 		}
 		standardTile("coolLevelDown", "device.switch", canChangeIcon: false, inactiveLabel: true, decoration: "flat") {
 			state("coolLevelDown", action:"coolLevelDown", icon:"st.thermostat.thermostat-down", backgroundColor:"#BAEDF7")
@@ -229,86 +153,55 @@
 			state("present", label:"present", action:"away", icon: "st.Home.home2")
 			state("not present", label:"away", action:"present", icon: "st.Transportation.transportation5")
 		} 
-		main "temperatureDisplay"
-		details(["temperatureDisplay", "humidity", "thermostatOperatingState",  "heatLevelUp", "coolLevelUp", "thermostatFanMode", "heatingSetpointDisplay", "coolingSetpointDisplay", "thermostatMode", "heatLevelDown", "coolLevelDown", "thermostatProgram", "presence", "refresh" ])
+		main "temperature"
+		details(["temperature", "humidity", "thermostatOperatingState",  "heatLevelUp", "coolLevelUp", "thermostatFanMode", "heatingSetpoint", "coolingSetpoint", "thermostatMode", "heatLevelDown", "coolLevelDown", "thermostatProgram", "presence", "refresh" ])
 	}
-}
-
-def installed() { initialize() }
-
-def updated() { initialize() }
-
-def initialize() {
-	state.polling = [ 
-		last: 0,
-		runNow: true
-	]	
-	refresh() 
 }
 
 def parse(String description) { }
 
-def refresh() { 
-	state.polling.runNow = true
-	parent.refresh() 
-}
+def refresh() { parent.refresh() }
 
 def poll() { updateThermostatData(parent.getDeviceStatus(this.device)) }
 
-def updateThermostatData(thermostatData) {
-	//update the state data
-	def next = (state.polling.last?:0) + 15000  //will not update if it's not more than 15 seconds. this is to stop polling from updating all the state data.
+def updateThermostatData(thermostatData) {		
+	def thermostatProgramSelection
+	def thermostatProgramMode = (device.currentValue("thermostatProgram") == "Manual")?"0":"1"
+	def thermostatMode = (device.currentState("thermostatMode")?.value)?device.currentState("thermostatMode")?.value:"auto"
 
-	if ((now() > next) || (state.polling.runNow)) {
-		state.polling.last = now()
-		state.polling.runNow = false
-		
-		def thermostatProgramSelection
-		def thermostatProgramMode = (device.currentValue("thermostatProgram") == "Manual")?"0":"1"
-		def thermostatMode = (device.currentState("thermostatMode")?.value)?device.currentState("thermostatMode")?.value:"auto"
-		
-		thermostatData.each { name, value -> 
-			if (name == "temperature" || name == "coolingSetpoint" || name == "heatingSetpoint") {
-				def displayValue = value.toString()
-				if (parent.getTemperatureUnit() == "C") {
-					displayValue  = String.format("%.1f", (Math.round(value * 20) / 20)) + "°"
-				} else {
-					displayValue  = String.format("%.0f", value) + "°"
-				}
-				def displayName = name + "Display"
-				sendEvent(name: displayName, value: displayValue as String, unit: parent.getTemperatureUnit(), displayed: false)
-				sendEvent(name: name, value: value , unit: parent.getTemperatureUnit())
-				log.debug "Sending Event: " + [name, value, parent.getTemperatureUnit()]
-			} else if (name == "thermostatProgramMode") {
-				thermostatProgramMode = value
-			} else if (name == "thermostatProgramSelection") {
-				thermostatProgramSelection = value
-			} else if (name == "thermostatMode") {
-				thermostatMode = value
-			} else if (name == "awayMode") {
-				if (value == "1") {
-					sendEvent(name: "presence", value: "not present")
-				} else {
-					sendEvent(name: "presence", value: "present")
-				}
+	thermostatData.each { name, value -> 
+        	if (name == "temperature" || name == "coolingSetpoint" || name == "heatingSetpoint") {
+			sendEvent(name: name, value: value , unit: getTemperatureScale())
+			log.debug "Sending Event: " + [name, value, getTemperatureScale()]
+		} else if (name == "thermostatProgramMode") {
+			thermostatProgramMode = value
+		} else if (name == "thermostatProgramSelection") {
+			thermostatProgramSelection = value
+		} else if (name == "thermostatMode") {
+			thermostatMode = value
+		} else if (name == "awayMode") {
+			if (value == "1") {
+				sendEvent(name: "presence", value: "not present")
 			} else {
-				sendEvent(name: name, value: value, displayed: false)
-				log.debug "Sending Misc Event: " + [name, value]
+				sendEvent(name: "presence", value: "present")
 			}
-		}
-        		
-		if (thermostatProgramMode == "0") {
-			sendEvent(name: "thermostatMode", value: thermostatMode)
-			sendEvent(name: "thermostatProgram", value: "Manual")
-			log.debug "Sending Event: " + ["thermostatMode", thermostatMode]
-			log.debug "Sending Event: " + ["thermostatProgram", "Manual"]			
 		} else {
-			sendEvent(name: "thermostatMode", value: "program") 
-			log.debug "Sending Event: " + ["thermostatMode", "program"]
-			if (thermostatProgramSelection) {
-				sendEvent(name: "thermostatProgram", value: parent.getThermostatProgramName(this.device, thermostatProgramSelection))
-				log.debug "Sending Event: " + ["thermostatProgram", parent.getThermostatProgramName(this.device, thermostatProgramSelection)]
-			}
+			sendEvent(name: name, value: value, displayed: false)
+			log.debug "Sending Misc Event: " + [name, value]
+		}
+	}
+
+	if (thermostatProgramMode == "0") {
+		sendEvent(name: "thermostatMode", value: thermostatMode)
+		sendEvent(name: "thermostatProgram", value: "Manual")
+		log.debug "Sending Event: " + ["thermostatMode", thermostatMode]
+		log.debug "Sending Event: " + ["thermostatProgram", "Manual"]			
+	} else {
+		sendEvent(name: "thermostatMode", value: "program") 
+		log.debug "Sending Event: " + ["thermostatMode", "program"]
+		if (thermostatProgramSelection) {
+			sendEvent(name: "thermostatProgram", value: parent.getThermostatProgramName(this.device, thermostatProgramSelection))
+			log.debug "Sending Event: " + ["thermostatProgram", parent.getThermostatProgramName(this.device, thermostatProgramSelection)]
 		}
 	}
 }
@@ -341,7 +234,7 @@ def setCoolingSetpoint(Number coolingSetpoint) {
 	
 	// check heating setpoint 
 	def coolSetpointDiff = parent.getTemperatureNext(coolingSetpoint, (diffHeat * -1))
-    log.debug "coolSetpointDiff : " + coolSetpointDiff
+	log.debug "coolSetpointDiff : " + coolSetpointDiff
 	def heatingSetpoint = device.currentValue("heatingSetpoint")
 	heatingSetpoint = (coolSetpointDiff < heatingSetpoint)? coolSetpointDiff : heatingSetpoint
 	    
@@ -350,7 +243,6 @@ def setCoolingSetpoint(Number coolingSetpoint) {
 
 def switchMode() {
 	def currentMode = device.currentState("thermostatMode")?.value
-	//log.debug "currentMode: " + currentMode
 	switch (currentMode) {
 		case "off":
 			setThermostatMode("heat")
@@ -435,18 +327,14 @@ def switchProgram() {
 }
 
 def setThermostatProgram(programID) {
-	state.polling.runNow = true
 	updateThermostatData([thermostatProgramMode: "1", thermostatProgramSelection: programID])
-    def thermostatResult = parent.setProgram(this.device, "1", programID)
-	state.polling.runNow = true
-    updateThermostatData(thermostatResult)
+	def thermostatResult = parent.setProgram(this.device, "1", programID)
+	updateThermostatData(thermostatResult)
 }
 
 def setThermostatData(thermostatData) {
-	state.polling.runNow = true
 	updateThermostatData(thermostatData)
 	def thermostatResult = parent.setThermostat(this.device, thermostatData)
-    state.polling.runNow = true
 	updateThermostatData(thermostatResult)
 }
 
@@ -454,9 +342,7 @@ def away() { setPresence("away") }
 def present() { setPresence("present") } 
 def setPresence(awayStatus) {
 	def awayMode = (awayStatus=="away")?"1":"0"
-	state.polling.runNow = true
 	updateThermostatData([awayMode: awayMode.toString()])
 	def thermostatResult = parent.setAway(this.device, awayStatus)
-	state.polling.runNow = true
 	updateThermostatData(thermostatResult)   
 }
