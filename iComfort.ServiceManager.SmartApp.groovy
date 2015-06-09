@@ -525,7 +525,7 @@ def setAway(childDevice, awayStatus) {
 
 //API URL
 def getApiURL() { 
-	if (settings.troubleshoot) {
+	if (settings.troubleshoot == "true") {
 		return "https://services-myicomfort-com-xjor6gavxo3b.runscope.net"
 	} else {
 		return "https://services.myicomfort.com"
