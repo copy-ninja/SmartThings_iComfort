@@ -45,7 +45,7 @@ def prefLogIn() {
 		} 
 		section("Advanced Options"){
 			input(name: "polling", title: "Server Polling (in Minutes)", type: "int", description: "in minutes", defaultValue: "5" )
-			paragraph "This option enables author to troubleshoot if you have problem adding devices. It allows the app to send information exchanged with MyQ server to the author. DO NOT ENABLE unless you have contacted author at jason@copyninja.net"
+			paragraph "This option enables author to troubleshoot if you have problem adding devices. It allows the app to send information exchanged with iComfort server to the author. DO NOT ENABLE unless you have contacted author at jason@copyninja.net"
 			input(name:"troubleshoot", title: "Troubleshoot", type: "boolean")
 		}            
 	}
@@ -86,7 +86,7 @@ def uninstalled() {
 
 def initialize() {    
 	// Get initial polling state
-	state.polling = [ last: 0 ]
+	state.polling = [ last: 0, rescheduler: now() ]
     
 	// Create new devices for each selected doors
 	def selectedDevices = []
@@ -124,8 +124,7 @@ def initialize() {
 	subscribe(location, "sunsetTime", runRefresh)
 	
 	//Refresh device
-	runEvery30Minutes(runRefresh)
-	runRefresh("")
+	runRefresh()
 }
 
 /* Access Management */
@@ -201,7 +200,7 @@ private getThermostatList() {
 	}   
 	//Retrieve all the Zones
 	gatewayList.each { gatewaySN, gatewayName ->		
-		apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: gatewaySN, TempUnit: (getTemperatureUnit()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
+		apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: gatewaySN, TempUnit: (getTemperatureScale()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
 			if (response.status == 200) {
 				response.data.tStatInfo.each { 
 					def dni = [ app.id, gatewaySN, it.Zone_Number ].join('|')
@@ -278,7 +277,7 @@ private apiPut(apiPath, apiParams = [], callback = {}) {
 
 // update child device data
 private updateDeviceChildData(device) {
-	apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: getDeviceGatewaySN(device), TempUnit: (getTemperatureUnit()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
+	apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: getDeviceGatewaySN(device), TempUnit: (getTemperatureScale()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
 		if (response.status == 200) {
 			response.data.tStatInfo.each { 
 				state.data[device.deviceNetworkId] = [
@@ -327,15 +326,22 @@ def lookupInfo( lookupName, lookupValue, lookupMode ) {
 /* for SmartDevice to call */
 // Refresh data
 def refresh() {
-    	log.info "Refreshing data..."
+	log.info "Refreshing data..."
 	// set polling states
-	state.polling = [ last: now() ]
+	state.polling.last = now()
 		
 	// update data for child devices
 	getAllChildDevices().each { device ->
 		if (updateDeviceChildData(device)) {
 			device.updateThermostatData(state.data[device.deviceNetworkId])
 		}
+	}
+    
+	//schedule the rescheduler to schedule refresh ;)
+	if ((state.polling.rescheduler?:0) + 2400000 < now()) {
+		log.info "Scheduling Auto Rescheduler.."
+		runEvery30Minutes(runRefresh)
+		state.polling.rescheduler = now()
 	}
 }
 
@@ -363,7 +369,7 @@ def setThermostat(childDevice, thermostatData = []) {
 		Heat_Set_Point: state.data[childDevice.deviceNetworkId].heatingSetpoint,
 		Fan_Mode: lookupInfo("thermostatFanMode",state.data[childDevice.deviceNetworkId].thermostatFanMode.toString(),false),
 		Operation_Mode: lookupInfo("thermostatMode",state.data[childDevice.deviceNetworkId].thermostatMode.toString(),false),
-		Pref_Temp_Units: (getTemperatureUnit()=="F")?0:1,
+		Pref_Temp_Units: (getTemperatureScale()=="F")?0:1,
 		Zone_Number: getDeviceZone(childDevice),
 		GatewaySN: getDeviceGatewaySN(childDevice) 
 	]
@@ -382,7 +388,7 @@ def setProgram(childDevice, scheduleMode, scheduleSelection) {
 	state.data[childDevice.deviceNetworkId].thermostatProgramMode = scheduleMode
 	if (scheduleMode == "1") {
 		state.data[childDevice.deviceNetworkId].thermostatProgramSelection = scheduleSelection
-		apiGet("/DBAcessService.svc/GetProgramInfo", [query: [GatewaySN: getDeviceGatewaySN(childDevice), ScheduleNum: scheduleSelection, TempUnit: (getTemperatureUnit()=="F")?0:1]]) { response ->
+		apiGet("/DBAcessService.svc/GetProgramInfo", [query: [GatewaySN: getDeviceGatewaySN(childDevice), ScheduleNum: scheduleSelection, TempUnit: (getTemperatureScale()=="F")?0:1]]) { response ->
 			if (response.status == 200) {
 				state.data[childDevice.deviceNetworkId].coolingSetpoint = response.data.Cool_Set_Point
 				state.data[childDevice.deviceNetworkId].heatingSetpoint = response.data.Heat_Set_Point
@@ -397,7 +403,7 @@ def setProgram(childDevice, scheduleMode, scheduleSelection) {
 		Heat_Set_Point: state.data[childDevice.deviceNetworkId].heatingSetpoint,
 		Fan_Mode: lookupInfo("thermostatFanMode",state.data[childDevice.deviceNetworkId].thermostatFanMode.toString(),false),
 		Operation_Mode: lookupInfo("thermostatMode",state.data[childDevice.deviceNetworkId].thermostatMode.toString(),false),
-		Pref_Temp_Units: (getTemperatureUnit()=="F")?0:1,
+		Pref_Temp_Units: (getTemperatureScale()=="F")?0:1,
 		Program_Schedule_Mode: scheduleMode,
 		Program_Schedule_Selection: scheduleSelection,
 		Zone_Number: getDeviceZone(childDevice),
@@ -444,9 +450,6 @@ def translateDesc(value) {
 	}
 }
 
-def getTemperatureUnit() {
-	return (location.temperatureScale) ? location.temperatureScale : "F"
-}
 
 def getThermostatProgramName(childDevice, thermostatProgramSelection) {
 	def thermostatProgramSelectionName = state?.lookup?.program[childDevice.deviceNetworkId]?.getAt(thermostatProgramSelection.toString())
@@ -462,7 +465,7 @@ def getThermostatProgramNext(childDevice, value) {
 }
 
 def getTemperatureNext(value, diffIndex) {
-	if (getTemperatureUnit()=="F") {
+	if (getTemperatureScale()=="F") {
 		return (value + diffIndex)
 	} else {
 		def currentTemperatureIndex = state?.list?.temperatureRangeC?.findIndexOf { it == value.toString() }.toInteger()
@@ -472,7 +475,7 @@ def getTemperatureNext(value, diffIndex) {
 }
 
 def getSetPointLimit( childDevice, limitType ) { 
-	if (getTemperatureUnit() == "F") {
+	if (getTemperatureScale() == "F") {
 		return  state?.lookup?.getAt(limitType)?.getAt(childDevice.deviceNetworkId) 
 	} else {
 		if (limitType == "differenceSetPoint") {
@@ -494,7 +497,7 @@ def setAway(childDevice, awayStatus) {
 	def apiQuery = [ 
 		awayMode: awayMode.toString(),
 		ZoneNumber: getDeviceZone(childDevice),
-		TempScale: (getTemperatureUnit()=="F")?0:1,
+		TempScale: (getTemperatureScale()=="F")?0:1,
 		GatewaySN: getDeviceGatewaySN(childDevice) 
 	]
 	
@@ -522,7 +525,7 @@ def setAway(childDevice, awayStatus) {
 
 //API URL
 def getApiURL() { 
-	if (settings.troubleshoot == "true") {
+	if (settings.troubleshoot) {
 		return "https://services-myicomfort-com-xjor6gavxo3b.runscope.net"
 	} else {
 		return "https://services.myicomfort.com"
@@ -545,4 +548,7 @@ def runRefresh(event) {
     
 	// Force Refresh NOWWW!!!!
 	refresh()
+    
+	//Update rescheduler's last run
+	if (!evt) state.polling.rescheduler = now()
 }
