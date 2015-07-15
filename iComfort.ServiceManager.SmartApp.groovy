@@ -1,10 +1,5 @@
 /**
- *  iComfort Service Manager SmartApp
- * 
- *  Author: Jason Mok
- *  Date: 2015-01-10
- *
- ***************************
+ *  Lennox iComfort (Connect)
  *
  *  Copyright 2015 Jason Mok
  *
@@ -17,10 +12,11 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- **************************
+ *  Last Updated : 7/14/2015
+ *
  */
 definition(
-	name: "iComfort (Connect)",
+	name: "Lennox iComfort (Connect)",
 	namespace: "copy-ninja",
 	author: "Jason Mok",
 	description: "Connect Lennox iComfort to control your thermostats",
@@ -38,7 +34,7 @@ preferences {
 /* Preferences */
 def prefLogIn() {
 	def showUninstall = username != null && password != null 
-	return dynamicPage(name: "prefLogIn", title: "Connect to iComfort", nextPage:"prefListDevice", uninstall:showUninstall, install: false) {
+	return dynamicPage(name: "prefLogIn", title: "Connect to Lennox iComfort", nextPage:"prefListDevice", uninstall:showUninstall, install: false) {
 		section("Login Credentials"){
 			input("username", "text", title: "Username", description: "iComfort Username (case sensitive)")
 			input("password", "password", title: "Password", description: "iComfort password (case sensitive)")
@@ -88,34 +84,15 @@ def initialize() {
 	// Get initial polling state
 	state.polling = [ last: 0, rescheduler: now() ]
     
-	// Create new devices for each selected doors
-	def selectedDevices = []
+	// Create selected devices
 	def thermostatList = getThermostatList()
-	def deleteDevices 
-   	 
-	if (settings.thermostat) {
-		if (settings.thermostat[0].size() > 1) {
-			selectedDevices = settings.thermostat
-		} else {
-			selectedDevices.add(settings.thermostat)
-		}
-	}
-     
-	selectedDevices.each { dni ->    	
-		def childDevice = getChildDevice(dni)
-		if (!childDevice) {
-			addChildDevice("copy-ninja", "iComfort Thermostat", dni, null, ["name": "iComfort: " + thermostatList[dni]])
-		} 
-	}
-    
-	//Remove devices that are not selected in the settings
-	if (!selectedDevices) {
-		deleteDevices = getAllChildDevices()
-	} else {
-		deleteDevices = getChildDevices().findAll { !selectedDevices.contains(it.deviceNetworkId) }
-	}
+	def selectedDevices = [] + getSelectedDevices("thermostat")
+	selectedDevices.each { (getChildDevice(it))?:addChildDevice("copy-ninja", "Lennox iComfort Thermostat", it, null, ["name": "Lennox iComfort: " + thermostatList[it]]) }
+
+	// Remove unselected devices
+	def deleteDevices = (selectedDevices) ? (getChildDevices().findAll { !selectedDevices.contains(it.deviceNetworkId) }) : getAllChildDevices()
 	deleteDevices.each { deleteChildDevice(it.deviceNetworkId) } 
-	
+    
 	//Subscribes to sunrise and sunset event to trigger refreshes
 	subscribe(location, "sunrise", runRefresh)
 	subscribe(location, "sunset", runRefresh)
@@ -126,6 +103,12 @@ def initialize() {
 	//Refresh device
 	runRefresh()
 }
+
+def getSelectedDevices( settingsName ) { 
+	def selectedDevices = [] 
+	(!settings.get(settingsName))?:((settings.get(settingsName)?.getAt(0)?.size() > 1)  ? settings.get(settingsName)?.each { selectedDevices.add(it) } : selectedDevices.add(settings.get(settingsName))) 
+	return selectedDevices 
+} 
 
 /* Access Management */
 private loginCheck() { 
@@ -328,7 +311,7 @@ def lookupInfo( lookupName, lookupValue, lookupMode ) {
 def refresh() {
 	log.info "Refreshing data..."
 	// set polling states
-	state.polling.last = now()
+	state.polling["last"] = now()
 		
 	// update data for child devices
 	getAllChildDevices().each { device ->
@@ -341,7 +324,7 @@ def refresh() {
 	if ((state.polling.rescheduler?:0) + 2400000 < now()) {
 		log.info "Scheduling Auto Rescheduler.."
 		runEvery30Minutes(runRefresh)
-		state.polling.rescheduler = now()
+		state.polling["rescheduler"] = now()
 	}
 }
 
@@ -538,10 +521,10 @@ def getApiAuth() {
 	return "Basic " + basicAuth.encodeAsBase64()
 }
 
-def runRefresh(event) {
-	log.info "Last refresh was "  + ((now() - state.polling.last)/60000) + " minutes ago"
+def runRefresh(evt) {
+	log.info "Last refresh was "  + ((now() - (state.polling?.last?:0))/60000) + " minutes ago"
 	// Reschedule if  didn't update for more than 5 minutes plus specified polling
-	if ((((state.polling.last?:0) + (((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1) * 60000) + 300000) < now()) && canSchedule()) {
+	if ((((state.polling?.last?:0) + (((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1) * 60000) + 300000) < now()) && canSchedule()) {
 		log.info "Scheduling Auto Refresh.."
 		schedule("* */" + ((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1) + " * * * ?", refresh)
 	}
