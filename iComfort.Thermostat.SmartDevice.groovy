@@ -1,10 +1,5 @@
 /**
- *	iComfort Thermostat SmartDevice
- *
- *	Author: Jason Mok
- *	Date: 2015-01-10
- *
- ***************************
+ *  Lennox iComfort Thermostat
  *
  *  Copyright 2015 Jason Mok
  *
@@ -17,20 +12,11 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- **************************
- *
- * REQUIREMENTS:
- * Refer to iComfort SmartApp
- *
- **************************
+ *  Last updated : 7/14/2015
  * 
- * USAGE:
- * Put this in Device Type. Don't install until you have all other device types scripts added
- * Refer to iComfort SmartApp
- *
  */
  metadata {
-	definition (name: "iComfort Thermostat", namespace: "copy-ninja", author: "Jason Mok") {
+	definition (name: "Lennox iComfort Thermostat", namespace: "copy-ninja", author: "Jason Mok") {
 		capability "Thermostat"
 		capability "Relative Humidity Measurement"
 		capability "Polling"
@@ -170,7 +156,7 @@ def updateThermostatData(thermostatData) {
 	def thermostatMode = (device.currentState("thermostatMode")?.value)?device.currentState("thermostatMode")?.value:"auto"
 
 	thermostatData.each { name, value -> 
-        	if (name == "temperature" || name == "coolingSetpoint" || name == "heatingSetpoint") {
+		if (name == "temperature" || name == "coolingSetpoint" || name == "heatingSetpoint") {
 			sendEvent(name: name, value: value , unit: getTemperatureScale())
 			log.debug "Sending Event: " + [name, value, getTemperatureScale()]
 		} else if (name == "thermostatProgramMode") {
@@ -211,15 +197,13 @@ def setHeatingSetpoint(Number heatingSetpoint) {
 	def minHeat = parent.getSetPointLimit(this.device, "heatingSetPointLow")
 	def maxHeat = parent.getSetPointLimit(this.device, "heatingSetPointHigh")
 	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint").toInteger()
-	
 	heatingSetpoint = (heatingSetpoint < minHeat)? minHeat : heatingSetpoint
 	heatingSetpoint = (heatingSetpoint > maxHeat)? maxHeat : heatingSetpoint
 
 	// check cooling setpoint 
 	def heatSetpointDiff = parent.getTemperatureNext(heatingSetpoint, diffHeat)
 	def coolingSetpoint = device.currentValue("coolingSetpoint")
-	coolingSetpoint = (heatSetpointDiff > coolingSetpoint)? heatSetpointDiff : coolingSetpoint
-    
+	coolingSetpoint = (heatSetpointDiff > coolingSetpoint)? heatSetpointDiff : coolingSetpoint   
 	setThermostatData([coolingSetpoint: coolingSetpoint, heatingSetpoint: heatingSetpoint])
 }
 
@@ -228,16 +212,13 @@ def setCoolingSetpoint(Number coolingSetpoint) {
 	def minCool = parent.getSetPointLimit(this.device, "coolingSetPointLow")
 	def maxCool = parent.getSetPointLimit(this.device, "coolingSetPointHigh")
 	def diffHeat = parent.getSetPointLimit(this.device, "differenceSetPoint").toInteger()
-
 	coolingSetpoint = (coolingSetpoint < minCool)? minCool : coolingSetpoint
 	coolingSetpoint = (coolingSetpoint > maxCool)? maxCool : coolingSetpoint
 	
 	// check heating setpoint 
 	def coolSetpointDiff = parent.getTemperatureNext(coolingSetpoint, (diffHeat * -1))
-	log.debug "coolSetpointDiff : " + coolSetpointDiff
 	def heatingSetpoint = device.currentValue("heatingSetpoint")
 	heatingSetpoint = (coolSetpointDiff < heatingSetpoint)? coolSetpointDiff : heatingSetpoint
-	    
 	setThermostatData([coolingSetpoint: coolingSetpoint, heatingSetpoint: heatingSetpoint])
 }
 
