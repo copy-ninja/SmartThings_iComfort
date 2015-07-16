@@ -12,7 +12,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last Updated : 7/14/2015
+ *  Last Updated : 7/15/2015
  *
  */
 definition(
@@ -83,6 +83,7 @@ def uninstalled() {
 def initialize() {    
 	// Get initial polling state
 	state.polling = [ last: 0, rescheduler: now() ]
+    state.troubleshoot = null
     
 	// Create selected devices
 	def thermostatList = getThermostatList()
@@ -314,14 +315,10 @@ def refresh() {
 	state.polling["last"] = now()
 		
 	// update data for child devices
-	getAllChildDevices().each { device ->
-		if (updateDeviceChildData(device)) {
-			device.updateThermostatData(state.data[device.deviceNetworkId])
-		}
-	}
+	getAllChildDevices().each { (!updateDeviceChildData(it))?:it.updateThermostatData(state.data[it.deviceNetworkId.toString()]) }
     
 	//schedule the rescheduler to schedule refresh ;)
-	if ((state.polling.rescheduler?:0) + 2400000 < now()) {
+	if ((state.polling["rescheduler"]?:0) + 2400000 < now()) {
 		log.info "Scheduling Auto Rescheduler.."
 		runEvery30Minutes(runRefresh)
 		state.polling["rescheduler"] = now()
@@ -329,13 +326,13 @@ def refresh() {
 }
 
 // Get Device Gateway SN
-def getDeviceGatewaySN(childDevice) { return childDevice.deviceNetworkId.split("\\|")[1] }
+def getDeviceGatewaySN(childDevice) { return childDevice.deviceNetworkId.toString().split("\\|")[1] }
 
 // Get Device Zone
-def getDeviceZone(childDevice) { return childDevice.deviceNetworkId.split("\\|")[2] }
+def getDeviceZone(childDevice) { return childDevice.deviceNetworkId.toString().split("\\|")[2] }
 
 // Get single device status
-def getDeviceStatus(childDevice) { return state.data[childDevice.deviceNetworkId] }
+def getDeviceStatus(childDevice) { return state.data[childDevice.deviceNetworkId.toString()] }
 
 // Send thermostat
 def setThermostat(childDevice, thermostatData = []) {
@@ -508,7 +505,12 @@ def setAway(childDevice, awayStatus) {
 
 //API URL
 def getApiURL() { 
+	def troubleshoot = "false"
 	if (settings.troubleshoot == "true") {
+		if (!(state.troubleshoot)) state.troubleshoot = now() + 3600000 
+		troubleshoot = (state.troubleshoot > now()) ? "true" : "false"
+	}
+	if (troubleshoot == "true") {
 		return "https://services-myicomfort-com-xjor6gavxo3b.runscope.net"
 	} else {
 		return "https://services.myicomfort.com"
@@ -522,9 +524,9 @@ def getApiAuth() {
 }
 
 def runRefresh(evt) {
-	log.info "Last refresh was "  + ((now() - (state.polling?.last?:0))/60000) + " minutes ago"
+	log.info "Last refresh was "  + ((now() - (state.polling["last"]?:0))/60000) + " minutes ago"
 	// Reschedule if  didn't update for more than 5 minutes plus specified polling
-	if ((((state.polling?.last?:0) + (((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1) * 60000) + 300000) < now()) && canSchedule()) {
+	if ((((state.polling["last"]?:0) + (((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1) * 60000) + 300000) < now()) && canSchedule()) {
 		log.info "Scheduling Auto Refresh.."
 		schedule("* */" + ((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1) + " * * * ?", refresh)
 	}
@@ -533,5 +535,5 @@ def runRefresh(evt) {
 	refresh()
     
 	//Update rescheduler's last run
-	if (!evt) state.polling.rescheduler = now()
+	if (!evt) state.polling["rescheduler"] = now()
 }
