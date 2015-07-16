@@ -12,7 +12,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last updated : 7/14/2015
+ *  Last updated : 7/15/2015
  * 
  */
  metadata {
@@ -38,6 +38,7 @@
 		command "away"
 		command "present"
 		command "setPresence"
+		command "updateThermostatData", ["string"]
 	}
 
 	simulator { }
