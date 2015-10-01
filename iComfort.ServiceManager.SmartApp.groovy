@@ -41,8 +41,8 @@ def prefLogIn() {
 		} 
 		section("Advanced Options"){
 			input(name: "polling", title: "Server Polling (in Minutes)", type: "int", description: "in minutes", defaultValue: "5" )
-			paragraph "This option enables author to troubleshoot if you have problem adding devices. It allows the app to send information exchanged with iComfort server to the author. DO NOT ENABLE unless you have contacted author at jason@copyninja.net"
-			input(name:"troubleshoot", title: "Troubleshoot", type: "boolean")
+			//paragraph "This option enables author to troubleshoot if you have problem adding devices. It allows the app to send information exchanged with iComfort server to the author. DO NOT ENABLE unless you have contacted author at jason@copyninja.net"
+			//input(name:"troubleshoot", title: "Troubleshoot", type: "boolean")
 		}            
 	}
 }
@@ -264,7 +264,8 @@ private updateDeviceChildData(device) {
 	apiGet("/DBAcessService.svc/GetTStatInfoList", [query: [GatewaySN: getDeviceGatewaySN(device), TempUnit: (getTemperatureScale()=="F")?0:1, Cancel_Away: "-1"]]) { response ->
 		if (response.status == 200) {
 			response.data.tStatInfo.each { 
-				state.data[device.deviceNetworkId] = [
+				def dni = [ app.id, it.GatewaySN, it.Zone_Number ].join('|')
+				state.data[dni] = [
 					temperature: it.Indoor_Temp,
 					humidity: it.Indoor_Humidity,
 					coolingSetpoint: it.Cool_Set_Point,
